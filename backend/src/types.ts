@@ -61,6 +61,8 @@ export interface CreateJobRequest {
   salary_max?: number;
   company: string;
   contact_email: string;
+  employment_type?: string;
+  department?: string;
   selected_boards?: string[]; // Board IDs to post to
 }
 

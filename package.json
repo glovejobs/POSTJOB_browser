@@ -1,0 +1,56 @@
+{
+  "name": "postjob-browser",
+  "version": "1.0.0",
+  "description": "Job Multi-Post MVP - Post jobs to multiple university boards",
+  "private": true,
+  "scripts": {
+    "dev:all": "concurrently -n \"backend,frontend\" -c \"yellow,cyan\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ..",
+    "build:all": "cd backend && npm run build && cd ../frontend && npm run build && cd ..",
+    "start:all": "concurrently -n \"backend,frontend\" -c \"yellow,cyan\" \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "setup": "npm run install:all && npm run setup:env && npm run setup:db",
+    "setup:env": "npm run setup:backend-env && npm run setup:frontend-env",
+    "setup:backend-env": "cd backend && cp .env.example .env",
+    "setup:frontend-env": "cd frontend && cp .env.local.example .env.local",
+    "setup:db": "cd backend && npm run prisma:migrate && npm run prisma:seed",
+    "prisma:studio": "cd backend && npm run prisma:studio",
+    "test:all": "concurrently -n \"backend,frontend\" -c \"yellow,cyan\" \"npm run test:backend\" \"npm run test:frontend\"",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "clean": "npm run clean:backend && npm run clean:frontend",
+    "clean:backend": "cd backend && rm -rf node_modules dist",
+    "clean:frontend": "cd frontend && rm -rf node_modules .next",
+    "docker:up": "docker-compose -f docker-compose.dev.yml up -d",
+    "docker:down": "docker-compose -f docker-compose.dev.yml down",
+    "docker:logs": "docker-compose -f docker-compose.dev.yml logs -f",
+    "redis:start": "docker run -d -p 6379:6379 --name redis-local redis:alpine",
+    "redis:stop": "docker stop redis-local && docker rm redis-local",
+    "services:start": "npm run docker:up",
+    "services:stop": "npm run docker:down"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/postjob-browser.git"
+  },
+  "keywords": [
+    "job-posting",
+    "automation",
+    "playwright",
+    "nextjs",
+    "express",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT"
+}

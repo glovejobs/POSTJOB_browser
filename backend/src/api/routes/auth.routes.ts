@@ -45,6 +45,38 @@ router.post('/register', async (req, res): Promise<any> => {
   }
 });
 
+// POST /api/auth/login
+router.post('/login', async (req, res): Promise<any> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found. Please register first.' });
+    }
+
+    // In a real app, we'd use proper authentication here
+    // For MVP, we'll return the existing API key
+    return res.json({
+      id: user.id,
+      email: user.email,
+      apiKey: user.apiKey,
+      message: 'Login successful'
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({ error: 'Login failed' });
+  }
+});
+
 // GET /api/auth/me
 router.get('/me', async (req, res): Promise<any> => {
   try {

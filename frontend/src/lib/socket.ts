@@ -3,6 +3,16 @@ import { JobStatusUpdate } from '../../../shared/types';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+export const connectSocket = (apiUrl: string, apiKey: string): Socket => {
+  const socket = io(apiUrl, {
+    auth: {
+      apiKey,
+    },
+    transports: ['websocket'],
+  });
+  return socket;
+};
+
 export class JobSocketClient {
   private socket: Socket | null = null;
   private jobId: string | null = null;

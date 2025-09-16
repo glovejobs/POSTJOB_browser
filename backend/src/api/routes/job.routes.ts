@@ -7,9 +7,14 @@ import { CreateJobRequest, JobStatusResponse } from '../../types';
 import { config } from '../../config/environment';
 
 const router = Router();
-const stripe = new Stripe(config.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-08-27.basil'
-});
+const isStripeEnabled = config.STRIPE_SECRET_KEY && !config.STRIPE_SECRET_KEY.includes('test_123');
+
+let stripe: Stripe | null = null;
+if (isStripeEnabled) {
+  stripe = new Stripe(config.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-08-27.basil'
+  });
+}
 
 // POST /api/jobs - Create a new job posting
 router.post('/', authenticate, async (req: AuthRequest, res) => {
@@ -25,17 +30,7 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
       }
     }
     
-    // Get selected boards or default to all enabled boards
-    let boardIds = jobData.selected_boards;
-    if (!boardIds || boardIds.length === 0) {
-      const boards = await prisma.jobBoard.findMany({
-        where: { enabled: true },
-        select: { id: true }
-      });
-      boardIds = boards.map((b: { id: string }) => b.id);
-    }
-    
-    // Create job in database first
+    // Create job in database first (as draft)
     const job = await prisma.job.create({
       data: {
         userId,
@@ -46,37 +41,15 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
         salaryMax: jobData.salary_max,
         company: jobData.company,
         contactEmail: jobData.contact_email,
-        status: 'pending'
+        employmentType: jobData.employment_type || 'full-time',
+        department: jobData.department,
+        status: 'draft' // Start as draft until boards are selected
       }
     });
-    
-    // Create Stripe payment intent with jobId
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: config.STRIPE_PRICE_PER_JOB, // $2.99 in cents
-      currency: 'usd',
-      metadata: {
-        userId,
-        jobId: job.id,
-        jobTitle: jobData.title,
-        boardCount: boardIds.length.toString()
-      }
-    });
-    
-    // Create job postings for each board
-    await prisma.jobPosting.createMany({
-      data: boardIds.map(boardId => ({
-        jobId: job.id,
-        boardId,
-        status: 'pending'
-      }))
-    });
-    
+
     return res.status(201).json({
-      jobId: job.id,
-      paymentIntent: {
-        client_secret: paymentIntent.client_secret,
-        payment_intent_id: paymentIntent.id
-      }
+      id: job.id,
+      message: 'Job created successfully. Please select job boards to publish.'
     });
   } catch (error) {
     console.error('Error creating job:', error);
@@ -132,6 +105,93 @@ router.get('/:id/status', authenticate, async (req: AuthRequest, res) => {
   }
 });
 
+// POST /api/jobs/:id/publish - Create job postings with selected boards
+router.post('/:id/publish', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const jobId = req.params.id;
+    const { boardIds } = req.body;
+    const userId = req.user!.id;
+    
+    // Verify job belongs to user
+    const job = await prisma.job.findFirst({
+      where: {
+        id: jobId,
+        userId
+      }
+    });
+    
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    
+    if (!boardIds || !Array.isArray(boardIds) || boardIds.length === 0) {
+      return res.status(400).json({ error: 'Board IDs are required' });
+    }
+    
+    // Create job postings for each board
+    await prisma.jobPosting.createMany({
+      data: boardIds.map(boardId => ({
+        jobId: job.id,
+        boardId,
+        status: 'pending'
+      })),
+      skipDuplicates: true
+    });
+    
+    // Update job status
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { status: 'payment_pending' }
+    });
+    
+    // Calculate total price based on board count
+    const pricePerJob = config.STRIPE_PRICE_PER_JOB || 299; // $2.99 in cents
+    
+    // Create payment intent
+    let paymentIntent;
+    if (stripe && isStripeEnabled) {
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: pricePerJob,
+        currency: 'usd',
+        metadata: {
+          userId,
+          jobId: job.id,
+          jobTitle: job.title,
+          boardCount: boardIds.length.toString()
+        }
+      });
+    } else {
+      // Development mode: create mock payment intent
+      console.log('⚠️ Development mode: Using mock payment (Stripe not configured)');
+      paymentIntent = {
+        id: `mock_pi_${job.id}_${Date.now()}`,
+        client_secret: `mock_secret_${job.id}_${Date.now()}`,
+        status: 'requires_payment_method'
+      };
+    }
+    
+    // Update job with payment intent ID
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { 
+        paymentIntentId: paymentIntent.id,
+        paymentStatus: 'pending'
+      }
+    });
+    
+    return res.status(201).json({
+      id: job.id,
+      paymentIntent: {
+        id: paymentIntent.id,
+        client_secret: paymentIntent.client_secret
+      }
+    });
+  } catch (error) {
+    console.error('Error publishing job:', error);
+    return res.status(500).json({ error: 'Failed to publish job' });
+  }
+});
+
 // POST /api/jobs/:id/confirm-payment - Confirm payment and start posting process
 router.post('/:id/confirm-payment', authenticate, async (req: AuthRequest, res) => {
   try {
@@ -152,7 +212,17 @@ router.post('/:id/confirm-payment', authenticate, async (req: AuthRequest, res) 
     }
     
     // Verify payment intent
-    const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
+    let paymentIntent;
+    if (stripe && isStripeEnabled) {
+      paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
+    } else {
+      // Development mode: auto-approve mock payments
+      console.log('⚠️ Development mode: Auto-approving mock payment');
+      paymentIntent = {
+        id: payment_intent_id,
+        status: payment_intent_id.startsWith('mock_') ? 'succeeded' : 'failed'
+      };
+    }
     
     if (paymentIntent.status !== 'succeeded') {
       return res.status(400).json({ error: 'Payment not confirmed' });
@@ -195,6 +265,110 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Error fetching jobs:', error);
     res.status(500).json({ error: 'Failed to fetch jobs' });
+  }
+});
+
+// GET /api/jobs/:id/payment-intent - Get or create payment intent for job
+router.get('/:id/payment-intent', authenticate, async (req: AuthRequest, res): Promise<any> => {
+  try {
+    const jobId = req.params.id;
+    const userId = req.user!.id;
+
+    const job = await prisma.job.findFirst({
+      where: {
+        id: jobId,
+        userId
+      },
+      include: {
+        postings: true
+      }
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Check if payment intent already exists
+    if (job.paymentIntentId) {
+      return res.json({
+        paymentIntent: {
+          id: job.paymentIntentId,
+          client_secret: `${job.paymentIntentId}_secret`
+        }
+      });
+    }
+
+    // Create new payment intent
+    const pricePerJob = config.STRIPE_PRICE_PER_JOB || 299; // $2.99 in cents
+    let paymentIntent;
+
+    if (stripe && isStripeEnabled) {
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: pricePerJob,
+        currency: 'usd',
+        metadata: {
+          userId,
+          jobId: job.id,
+          jobTitle: job.title,
+          boardCount: job.postings.length.toString()
+        }
+      });
+    } else {
+      // Development mode
+      paymentIntent = {
+        id: `mock_pi_${job.id}_${Date.now()}`,
+        client_secret: `mock_secret_${job.id}_${Date.now()}`
+      };
+    }
+
+    // Update job with payment intent ID
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        paymentIntentId: paymentIntent.id
+      }
+    });
+
+    return res.json({
+      paymentIntent: {
+        id: paymentIntent.id,
+        client_secret: paymentIntent.client_secret
+      }
+    });
+  } catch (error) {
+    console.error('Error getting payment intent:', error);
+    return res.status(500).json({ error: 'Failed to get payment intent' });
+  }
+});
+
+// GET /api/jobs/:id - Get single job details
+router.get('/:id', authenticate, async (req: AuthRequest, res): Promise<any> => {
+  try {
+    const jobId = req.params.id;
+    const userId = req.user!.id;
+    
+    const job = await prisma.job.findFirst({
+      where: {
+        id: jobId,
+        userId
+      },
+      include: {
+        postings: {
+          include: {
+            board: true
+          }
+        }
+      }
+    });
+    
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    
+    return res.json(job);
+  } catch (error) {
+    console.error('Error fetching job:', error);
+    return res.status(500).json({ error: 'Failed to fetch job' });
   }
 });
 

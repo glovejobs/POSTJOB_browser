@@ -16,6 +16,12 @@ interface EnvironmentConfig {
   GROQ_API_KEY?: string;
   OPENAI_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
+  // Email configuration
+  EMAIL_FROM?: string;
+  SMTP_HOST?: string;
+  SMTP_PORT?: number;
+  SMTP_USER?: string;
+  SMTP_PASS?: string;
 }
 
 function validateEnvironment(): EnvironmentConfig {
@@ -50,6 +56,13 @@ function validateEnvironment(): EnvironmentConfig {
     process.exit(1);
   }
 
+  // Validate SMTP port if provided
+  const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : undefined;
+  if (smtpPort !== undefined && (isNaN(smtpPort) || smtpPort <= 0 || smtpPort > 65535)) {
+    console.error('❌ SMTP_PORT must be a valid port number between 1 and 65535');
+    process.exit(1);
+  }
+
   return {
     NODE_ENV: process.env.NODE_ENV || 'development',
     PORT: port,
@@ -63,7 +76,13 @@ function validateEnvironment(): EnvironmentConfig {
     LLM_PROVIDER: process.env.LLM_PROVIDER,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    // Email configuration
+    EMAIL_FROM: process.env.EMAIL_FROM,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_PORT: smtpPort,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASS: process.env.SMTP_PASS
   };
 }
 

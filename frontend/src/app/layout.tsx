@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
+import { Outfit } from "next/font/google";
 import localFont from "next/font/local";
+import { BRAND_CONFIG, getCSSVariables } from "@/../../shared/constants";
 import "./globals.css";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit",
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
 });
+
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
@@ -14,7 +18,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Job Multi-Post - Post to Multiple Job Boards",
+  title: `${BRAND_CONFIG.name} - ${BRAND_CONFIG.tagline}`,
   description: "Post your job opening to 5 university job boards with one click",
 };
 
@@ -23,10 +27,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cssVariables = getCSSVariables();
+
   return (
-    <html lang="en">
+    <html lang="en" className={outfit.variable}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${outfit.className} ${geistMono.variable} antialiased`}
+        style={{
+          ...cssVariables,
+          fontFamily: BRAND_CONFIG.typography.fontFamily.primary,
+        } as React.CSSProperties}
       >
         {children}
       </body>

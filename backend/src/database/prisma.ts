@@ -4,6 +4,10 @@ const mockPrismaClient = {
     findUnique: async (_query?: any) => ({ id: '1', email: 'test@example.com', apiKey: 'test-key', createdAt: new Date() }),
     create: async (data: any) => ({ id: '1', ...data.data, createdAt: new Date() })
   },
+  postjob_users: {
+    findUnique: async (_query?: any) => ({ id: '1', email: 'test@example.com', api_key: 'test-key', created_at: new Date(), updated_at: new Date() }),
+    create: async (data: any) => ({ id: '1', ...data.data, created_at: new Date(), updated_at: new Date() })
+  },
   jobBoard: {
     findMany: async (_query?: any) => [
       { id: '1', name: 'Harvard University Careers', baseUrl: 'https://harvard.edu/careers', enabled: true },
@@ -14,27 +18,103 @@ const mockPrismaClient = {
     ],
     findUnique: async (_query?: any) => ({ id: '1', name: 'Test Board', baseUrl: 'https://test.com', enabled: true })
   },
+  job_boards: {
+    findMany: async (_query?: any) => [
+      { id: '1', name: 'Harvard', base_url: 'https://harvard.edu/careers', enabled: true },
+      { id: '2', name: 'MIT', base_url: 'https://careers.mit.edu', enabled: true },
+      { id: '3', name: 'Stanford', base_url: 'https://jobs.stanford.edu', enabled: true }
+    ],
+    findUnique: async (_query?: any) => ({ id: '1', name: 'Test Board', base_url: 'https://test.com', enabled: true })
+  },
   job: {
     create: async (data: any) => ({ id: '1', ...data.data, createdAt: new Date() }),
+    findUnique: async (_query?: any) => ({
+      id: '1',
+      title: 'Test Job',
+      status: 'pending',
+      postings: [],
+      paymentIntentId: null
+    }),
+    findFirst: async (_query?: any) => ({
+      id: '1',
+      title: 'Test Job',
+      status: 'pending',
+      postings: [],
+      paymentIntentId: null
+    }),
+    findMany: async (_query?: any) => [{ id: '1', title: 'Test Job', status: 'pending', _count: { postings: 5 } }],
+    update: async (_query?: any) => ({ id: '1', title: 'Test Job', status: 'posting', paymentIntentId: 'pi_test_123' })
+  },
+  postjob_jobs: {
+    create: async (data: any) => ({ id: '1', ...data.data, created_at: new Date(), updated_at: new Date() }),
     findUnique: async (_query?: any) => ({ 
       id: '1', 
-      title: 'Test Job', 
+      title: 'Test Job',
+      description: 'Test Description',
+      location: 'Test Location',
+      company: 'Test Company',
+      contact_email: 'test@company.com',
+      salary_min: 50000,
+      salary_max: 100000,
+      employment_type: 'full-time',
+      department: 'Engineering',
       status: 'pending', 
-      postings: [] 
+      job_postings: [{
+        id: '1',
+        board_id: '1',
+        status: 'pending',
+        job_boards: { id: '1', name: 'Harvard', enabled: true }
+      }],
+      postjob_users: { email: 'test@example.com' }
     }),
     findFirst: async (_query?: any) => ({ 
       id: '1', 
-      title: 'Test Job', 
+      title: 'Test Job',
+      description: 'Test Description',
+      location: 'Test Location',
+      company: 'Test Company',
+      contact_email: 'test@company.com',
+      salary_min: 50000,
+      salary_max: 100000,
+      employment_type: 'full-time',
+      department: 'Engineering',
       status: 'pending', 
-      postings: [] 
+      job_postings: [] 
     }),
-    findMany: async (_query?: any) => [{ id: '1', title: 'Test Job', status: 'pending', _count: { postings: 5 } }],
-    update: async (_query?: any) => ({ id: '1', title: 'Test Job', status: 'posting' })
+    findMany: async (_query?: any) => [{ id: '1', title: 'Test Job', status: 'pending', _count: { job_postings: 5 } }],
+    update: async (_query?: any) => ({ id: '1', title: 'Test Job', status: 'posting' }),
+    updateMany: async (_query?: any) => ({ count: 1 })
   },
   jobPosting: {
     createMany: async (_data?: any) => ({ count: 5 }),
     findMany: async (_query?: any) => [],
-    update: async (_query?: any) => ({ id: '1', status: 'success' })
+    update: async (_query?: any) => ({ id: '1', status: 'success' }),
+    updateMany: async (_query?: any) => ({ count: 1 })
+  },
+  job_postings: {
+    createMany: async (_data?: any) => ({ count: 5 }),
+    findMany: async (_query?: any) => [{
+      id: '1',
+      job_id: '1',
+      board_id: '1',
+      status: 'pending',
+      job_boards: { id: '1', name: 'Harvard', enabled: true },
+      postjob_jobs: {
+        id: '1',
+        title: 'Test Job',
+        description: 'Test Description',
+        location: 'Test Location',
+        company: 'Test Company',
+        contact_email: 'test@company.com',
+        salary_min: 50000,
+        salary_max: 100000,
+        employment_type: 'full-time',
+        department: 'Engineering',
+        postjob_users: { email: 'test@example.com' }
+      }
+    }],
+    update: async (_query?: any) => ({ id: '1', status: 'success' }),
+    updateMany: async (_query?: any) => ({ count: 1 })
   }
 };
 

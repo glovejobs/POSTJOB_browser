@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { CreateJobRequest, JobBoard } from '../types';
+import { CreateJobRequest, JobBoard } from '../../../shared/types';
 import { cn } from '@/lib/utils';
 
 interface JobFormProps {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Loader2, ExternalLink } from 'lucide-react';
-import { JobStatusResponse, JobStatusUpdate } from '../types';
+import { JobStatusResponse, JobStatusUpdate } from '../../../shared/types';
 import { jobs } from '@/lib/api';
 import { JobSocketClient } from '@/lib/socket';
 import { cn } from '@/lib/utils';

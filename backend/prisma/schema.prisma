@@ -6,19 +6,27 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  apiKey    String   @unique @map("api_key")
-  createdAt DateTime @default(now()) @map("created_at")
-  
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  apiKey                String    @unique @map("api_key")
+  password              String?   // For users who set passwords
+  fullName              String?   @map("full_name")
+  stripeCustomerId      String?   @map("stripe_customer_id")
+  resetPasswordToken    String?   @unique @map("reset_password_token")
+  resetPasswordExpires  DateTime? @map("reset_password_expires")
+  emailVerified         Boolean   @default(false) @map("email_verified")
+  emailVerificationToken String?  @unique @map("email_verification_token")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
   jobs      Job[]
-  
-  @@map("users")
+
+  @@map("postjob_users")
 }
 
 model JobBoard {
@@ -26,31 +34,40 @@ model JobBoard {
   name      String
   baseUrl   String   @map("base_url")
   postUrl   String   @map("post_url")
-  selectors Json
+  selectors Json     @default("{}")
   enabled   Boolean  @default(true)
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   postings  JobPosting[]
-  
+
   @@map("job_boards")
 }
 
 model Job {
-  id           String   @id @default(uuid())
-  userId       String   @map("user_id")
-  title        String
-  description  String   @db.Text
-  location     String
-  salaryMin    Int?     @map("salary_min")
-  salaryMax    Int?     @map("salary_max")
-  company      String
-  contactEmail String   @map("contact_email")
-  status       String   @default("pending") // pending, posting, completed, failed
-  createdAt    DateTime @default(now()) @map("created_at")
-  
-  user         User         @relation(fields: [userId], references: [id])
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  title           String
+  description     String
+  location        String
+  salaryMin       Int?     @map("salary_min")
+  salaryMax       Int?     @map("salary_max")
+  company         String
+  contactEmail    String   @map("contact_email")
+  employmentType  String?  @map("employment_type")
+  department      String?
+  status          String   @default("draft") // draft, pending, posting, completed, failed, payment_pending
+  paymentIntentId String?  @map("payment_intent_id")
+  paymentStatus   String   @default("pending") @map("payment_status") // pending, processing, succeeded, failed
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   postings     JobPosting[]
-  
-  @@map("jobs")
+
+  @@index([userId])
+  @@index([status])
+  @@map("postjob_jobs")
 }
 
 model JobPosting {
@@ -59,12 +76,16 @@ model JobPosting {
   boardId      String    @map("board_id")
   status       String    @default("pending") // pending, posting, success, failed
   externalUrl  String?   @map("external_url")
-  errorMessage String?   @map("error_message") @db.Text
+  errorMessage String?   @map("error_message")
   postedAt     DateTime? @map("posted_at")
   createdAt    DateTime  @default(now()) @map("created_at")
-  
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
   job          Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
   board        JobBoard  @relation(fields: [boardId], references: [id])
-  
+
+  @@index([jobId])
+  @@index([boardId])
+  @@index([status])
   @@map("job_postings")
 }

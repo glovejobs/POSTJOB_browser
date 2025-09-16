@@ -23,16 +23,20 @@ export interface JobBoard {
 
 export interface Job {
   id: string;
-  user_id: string;
+  userId: string;
   title: string;
   description: string;
   location: string;
-  salary_min?: number;
-  salary_max?: number;
+  salaryMin?: number;
+  salaryMax?: number;
   company: string;
-  contact_email: string;
+  contactEmail: string;
+  employmentType?: string;
+  department?: string;
   status: JobStatus;
-  created_at: Date;
+  createdAt: Date;
+  updatedAt?: Date;
+  postings?: JobPosting[];
 }
 
 export interface JobPosting {
@@ -46,7 +50,7 @@ export interface JobPosting {
   created_at: Date;
 }
 
-export type JobStatus = 'pending' | 'posting' | 'completed' | 'failed';
+export type JobStatus = 'draft' | 'pending' | 'posting' | 'completed' | 'failed' | 'payment_pending';
 export type PostingStatus = 'pending' | 'posting' | 'success' | 'failed';
 
 // API Request/Response types
@@ -58,6 +62,8 @@ export interface CreateJobRequest {
   salary_max?: number;
   company: string;
   contact_email: string;
+  employment_type?: string;
+  department?: string;
   selected_boards?: string[]; // Board IDs to post to
 }
 
