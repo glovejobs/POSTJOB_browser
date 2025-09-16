@@ -32,7 +32,8 @@
       "Bash(npm install:*)",
       "Bash(npm run dev:*)",
       "Bash(npx playwright install:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
