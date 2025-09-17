@@ -249,6 +249,159 @@ body {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
   }
+
+  /* Progress Animations */
+  @keyframes progress-fill {
+    from {
+      width: 0;
+    }
+  }
+
+  @keyframes progress-indeterminate {
+    0% {
+      width: 0;
+      margin-left: 0;
+    }
+    50% {
+      width: 50%;
+      margin-left: 25%;
+    }
+    100% {
+      width: 0;
+      margin-left: 100%;
+    }
+  }
+
+  .animate-progress-fill {
+    animation: progress-fill 1s ease-out;
+  }
+
+  .animate-progress-indeterminate {
+    animation: progress-indeterminate 1.5s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s ease-in-out infinite;
+  }
+
+  /* Page Transition Animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideOutLeft {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+  }
+
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes scaleOut {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+  }
+
+  @keyframes routeTransition {
+    0% {
+      opacity: 0;
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+    50% {
+      opacity: 1;
+      transform: scaleX(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scaleX(0);
+      transform-origin: right;
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 300ms ease-in-out;
+  }
+
+  .animate-fadeOut {
+    animation: fadeOut 300ms ease-in-out;
+  }
+
+  .animate-slideInRight {
+    animation: slideInRight 300ms ease-out;
+  }
+
+  .animate-slideOutLeft {
+    animation: slideOutLeft 300ms ease-out;
+  }
+
+  .animate-slideInUp {
+    animation: slideInUp 300ms ease-out;
+  }
+
+  .animate-scaleIn {
+    animation: scaleIn 200ms ease-out;
+  }
+
+  .animate-scaleOut {
+    animation: scaleOut 200ms ease-out;
+  }
 }
 
 @layer utilities {
@@ -279,5 +432,90 @@ body {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  /* Enhanced Loading Effects */
+  @keyframes pulse-smooth {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  @keyframes shimmer-effect {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* Skeleton Loading */
+  .skeleton-loading {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer-effect 1.5s infinite;
+    border-radius: 8px;
+  }
+
+  /* Loading States */
+  .loading-overlay {
+    position: relative;
+    pointer-events: none;
+  }
+
+  .loading-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: inherit;
+  }
+
+  /* Click Feedback */
+  .clickable-smooth {
+    transition: transform 0.1s ease, box-shadow 0.2s ease;
+  }
+
+  .clickable-smooth:active {
+    transform: scale(0.98);
+  }
+
+  /* Smooth Transitions */
+  .transition-smooth-all {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Animation Classes */
+  .animate-pulse-smooth {
+    animation: pulse-smooth 2s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    animation: shimmer-effect 2s infinite;
+  }
+
+  /* Focus States with Brand Colors */
+  .focus-brand {
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    --tw-ring-color: var(--color-primary);
+  }
+
+  /* Loading Spinner */
+  @keyframes spin-smooth {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin-smooth {
+    animation: spin-smooth 1s linear infinite;
   }
 }

@@ -6,6 +6,11 @@ import { JobStatusResponse, JobStatusUpdate } from '../../../shared/types';
 import { jobs } from '@/lib/api';
 import { JobSocketClient } from '@/lib/socket';
 import { cn } from '@/lib/utils';
+import { JobPostingProgress, CircularProgress, Stepper } from './ui/ProgressIndicator';
+import { PageLoader } from './ui/Loader';
+import { SkeletonCard } from './ui/Skeleton';
+import { BRAND_CONFIG } from '../../../shared/constants';
+import { usePolling } from '@/hooks/useApi';
 
 interface StatusDashboardProps {
   jobId: string;
@@ -16,6 +21,18 @@ export default function StatusDashboard({ jobId }: StatusDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [socket] = useState(() => new JobSocketClient());
+  const [overallProgress, setOverallProgress] = useState(0);
+
+  // Calculate overall progress
+  useEffect(() => {
+    if (status?.postings) {
+      const total = status.postings.length;
+      const completed = status.postings.filter(p =>
+        p.status === 'success' || p.status === 'failed'
+      ).length;
+      setOverallProgress((completed / total) * 100);
+    }
+  }, [status?.postings]);
   
   useEffect(() => {
     // Initial fetch

@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import localFont from "next/font/local";
 import { BRAND_CONFIG, getCSSVariables } from "@/../../shared/constants";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RouteTransition } from "@/components/ui/PageTransition";
+import { TopLoadingBar } from "@/components/ui/TopLoadingBar";
+import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -38,7 +42,14 @@ export default function RootLayout({
           fontFamily: BRAND_CONFIG.typography.fontFamily.primary,
         } as React.CSSProperties}
       >
-        {children}
+        <ErrorBoundary>
+          <ToastProvider>
+            <TopLoadingBar />
+            <RouteTransition>
+              {children}
+            </RouteTransition>
+          </ToastProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

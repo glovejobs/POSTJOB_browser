@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { CreateJobRequest, JobBoard } from '../../../shared/types';
 import { cn } from '@/lib/utils';
+import { Button } from './ui/Button';
+import { BRAND_CONFIG } from '../../../shared/constants';
+import { CheckCircle, Building, MapPin, Mail, DollarSign, Briefcase } from 'lucide-react';
 
 interface JobFormProps {
   boards: JobBoard[];
@@ -15,6 +18,7 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
   const [selectedBoards, setSelectedBoards] = useState<string[]>(
     boards.map(b => b.id)
   );
+  const [fieldLoading, setFieldLoading] = useState<Record<string, boolean>>({});
   
   const {
     register,
@@ -25,6 +29,8 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
   
   const handleFormSubmit = async (data: CreateJobRequest) => {
     setLoading(true);
+    // Add a slight delay for better UX perception
+    await new Promise(resolve => setTimeout(resolve, 300));
     try {
       await onSubmit({
         ...data,
@@ -47,8 +53,9 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
       {/* Job Title */}
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+      <div className="transition-all duration-200 hover:scale-[1.01]">
+        <label htmlFor="title" className="block text-sm font-medium mb-1 flex items-center gap-2" style={{ color: BRAND_CONFIG.colors.textPrimary }}>
+          <Briefcase size={16} />
           Job Title *
         </label>
         <input
@@ -56,10 +63,14 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
           id="title"
           {...register('title', { required: 'Job title is required' })}
           className={cn(
-            "w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm",
-            "focus:outline-none focus:ring-indigo-500 focus:border-indigo-500",
+            "w-full px-3 py-2 border rounded-md shadow-sm transition-all",
+            "focus:outline-none focus:ring-2 focus:ring-offset-2",
             errors.title && "border-red-500"
           )}
+          style={{
+            borderColor: errors.title ? BRAND_CONFIG.colors.error : BRAND_CONFIG.colors.border,
+            '--tw-ring-color': BRAND_CONFIG.colors.primary
+          } as React.CSSProperties}
           placeholder="e.g. Senior Software Engineer"
         />
         {errors.title && (
@@ -68,8 +79,9 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
       </div>
       
       {/* Company */}
-      <div>
-        <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
+      <div className="transition-all duration-200 hover:scale-[1.01]">
+        <label htmlFor="company" className="block text-sm font-medium mb-1 flex items-center gap-2" style={{ color: BRAND_CONFIG.colors.textPrimary }}>
+          <Building size={16} />
           Company Name *
         </label>
         <input
@@ -89,8 +101,9 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
       </div>
       
       {/* Location */}
-      <div>
-        <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+      <div className="transition-all duration-200 hover:scale-[1.01]">
+        <label htmlFor="location" className="block text-sm font-medium mb-1 flex items-center gap-2" style={{ color: BRAND_CONFIG.colors.textPrimary }}>
+          <MapPin size={16} />
           Location *
         </label>
         <input
@@ -186,21 +199,23 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
       </div>
       
       {/* Board Selection */}
-      <div>
-        <h3 className="text-sm font-medium text-gray-700 mb-3">
+      <div className="transition-all duration-200">
+        <h3 className="text-sm font-medium mb-3 flex items-center gap-2" style={{ color: BRAND_CONFIG.colors.textPrimary }}>
+          <CheckCircle size={16} />
           Select Job Boards ({selectedBoards.length} selected)
         </h3>
         <div className="space-y-2">
           {boards.map((board) => (
             <label
               key={board.id}
-              className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded"
+              className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
             >
               <input
                 type="checkbox"
                 checked={selectedBoards.includes(board.id)}
                 onChange={() => toggleBoard(board.id)}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                className="h-4 w-4 border-gray-300 rounded transition-all duration-200"
+                style={{ '--tw-text-opacity': 1, color: BRAND_CONFIG.colors.primary } as React.CSSProperties}
               />
               <span className="text-sm text-gray-700">{board.name}</span>
             </label>
@@ -212,18 +227,16 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
       </div>
       
       {/* Submit Button */}
-      <button
+      <Button
         type="submit"
-        disabled={loading || selectedBoards.length === 0}
-        className={cn(
-          "w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white",
-          "bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
-          "disabled:bg-gray-300 disabled:cursor-not-allowed",
-          "transition-colors duration-200"
-        )}
+        loading={loading}
+        disabled={selectedBoards.length === 0}
+        size="lg"
+        fullWidth
+        icon={loading ? undefined : <DollarSign size={20} />}
       >
-        {loading ? 'Processing...' : `Post Job - $2.99`}
-      </button>
+        {loading ? 'Processing Your Job Posting...' : `Post Job to ${selectedBoards.length} Board${selectedBoards.length !== 1 ? 's' : ''} - $2.99`}
+      </Button>
     </form>
   );
 }

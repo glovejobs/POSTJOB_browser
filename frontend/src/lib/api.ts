@@ -184,14 +184,18 @@ export const jobs = {
   },
 
   get: async (id: string): Promise<Job> => {
+    // Check if ID is a valid UUID (Supabase uses UUIDs)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
     try {
-      // Try Supabase first
-      const apiKey = localStorage.getItem('api_key');
-      if (apiKey) {
-        const user = await db.users.findByApiKey(apiKey);
-        if (user && user !== null) {
-          const supabaseJob = await db.jobs.findById(id);
-          if (supabaseJob) {
+      // Only try Supabase if it's a UUID
+      if (isUUID) {
+        const apiKey = localStorage.getItem('api_key');
+        if (apiKey) {
+          const user = await db.users.findByApiKey(apiKey);
+          if (user && user !== null) {
+            const supabaseJob = await db.jobs.findById(id);
+            if (supabaseJob) {
             return {
               id: supabaseJob.id,
               userId: supabaseJob.user_id,
@@ -207,7 +211,8 @@ export const jobs = {
               status: supabaseJob.status,
               createdAt: new Date(supabaseJob.created_at),
               updatedAt: supabaseJob.updated_at ? new Date(supabaseJob.updated_at) : undefined,
-            };
+              };
+            }
           }
         }
       }

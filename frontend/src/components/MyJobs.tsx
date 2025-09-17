@@ -1,14 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Job } from '@/../../shared/types';
 import { BRAND_CONFIG } from '@/../../shared/constants';
 import {
-  Search, Filter, MoreVertical, MapPin, Plus
+  Search, Filter, MoreVertical, MapPin, Plus, Edit, Trash2, Copy
 } from 'lucide-react';
+import { SkeletonCard, SkeletonTable } from './ui/Skeleton';
+import { ButtonLoader } from './ui/Loader';
+import { StaggerAnimation } from './ui/PageTransition';
+import { useApi, useMutation } from '@/hooks/useApi';
+import { jobsApi } from '@/services/api';
 
 interface MyJobsProps {
-  jobs: Job[];
+  initialJobs?: Job[];
   onJobClick: (job: Job) => void;
   onPostNewJob: () => void;
 }
@@ -21,15 +26,56 @@ interface JobStats {
   total: number;
 }
 
-export default function MyJobs({ jobs, onJobClick, onPostNewJob }: MyJobsProps) {
+export default function MyJobs({ initialJobs = [], onJobClick, onPostNewJob }: MyJobsProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'open' | 'closed' | 'draft'>('all');
   const [sortBy, setSortBy] = useState<'latest' | 'oldest'>('latest');
+  const [optimisticJobs, setOptimisticJobs] = useState<Job[]>(initialJobs);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
+  // Always use initial jobs from parent since parent is fetching
+  useEffect(() => {
+    setOptimisticJobs(initialJobs);
+  }, [initialJobs]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setActiveDropdown(null);
+    if (activeDropdown) {
+      document.addEventListener('click', handleClickOutside);
+    }
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [activeDropdown]);
+
+  // We don't fetch here since parent already fetches
+  const loading = false;
+  const error = null;
+  const refetch = () => Promise.resolve();
+
+  // Delete job mutation with optimistic update
+  const deleteJobMutation = useMutation<void, string>(
+    (jobId) => jobsApi.deleteJob(jobId),
+    {
+      onSuccess: () => refetch()
+    }
+  );
+
+  const handleDeleteJob = async (jobId: string) => {
+    // Optimistic update
+    setOptimisticJobs(prev => prev.filter(job => job.id !== jobId));
+
+    try {
+      await deleteJobMutation.mutate(jobId);
+    } catch (error) {
+      // Revert on error
+      refetch();
+    }
+  };
 
   const { colors, typography } = BRAND_CONFIG;
 
   // Filter jobs based on active filter
-  const filteredJobs = jobs.filter(job => {
+  const filteredJobs = (optimisticJobs || []).filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          job.location?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -81,6 +127,58 @@ export default function MyJobs({ jobs, onJobClick, onPostNewJob }: MyJobsProps) 
     return `${diffDays} Days ago`;
   };
 
+  // Show skeleton loader while parent is loading
+  if (initialJobs === undefined) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold mb-2" style={{ color: colors.dark, fontFamily: typography.fontFamily.primary }}>
+            My jobs
+          </h1>
+          <p style={{ color: colors.textSecondary, fontFamily: typography.fontFamily.primary }}>
+            Stay on top of your job listings, connect with candidates, and keep your hiring process moving
+          </p>
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state when no jobs
+  if (optimisticJobs.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold mb-2" style={{ color: colors.dark, fontFamily: typography.fontFamily.primary }}>
+            My jobs
+          </h1>
+          <p style={{ color: colors.textSecondary, fontFamily: typography.fontFamily.primary }}>
+            Stay on top of your job listings, connect with candidates, and keep your hiring process moving
+          </p>
+        </div>
+        <div className="text-center py-12">
+          <p style={{ color: colors.textSecondary, fontFamily: typography.fontFamily.primary }}>
+            No jobs found. Create your first job listing!
+          </p>
+          <button
+            onClick={onPostNewJob}
+            className="mt-4 px-6 py-2 rounded-lg text-white"
+            style={{
+              backgroundColor: colors.primary,
+              fontFamily: typography.fontFamily.primary
+            }}
+          >
+            Post Your First Job
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -110,7 +208,7 @@ export default function MyJobs({ jobs, onJobClick, onPostNewJob }: MyJobsProps) 
                 fontFamily: typography.fontFamily.primary
               }}
             >
-              {filter} ({jobs.filter(j => {
+              {filter} ({optimisticJobs.filter(j => {
                 switch (filter) {
                   case 'open': return j.status === 'completed' || j.status === 'posting';
                   case 'closed': return j.status === 'failed';
@@ -188,7 +286,7 @@ export default function MyJobs({ jobs, onJobClick, onPostNewJob }: MyJobsProps) 
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div 
+                    <div
                       className="px-3 py-1 rounded-full text-xs font-medium"
                       style={{
                         backgroundColor: isOpen ? `${colors.success}15` : `${colors.lightGray}15`,
@@ -197,9 +295,63 @@ export default function MyJobs({ jobs, onJobClick, onPostNewJob }: MyJobsProps) 
                     >
                       {isOpen ? 'Open' : 'Draft'}
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); }} className="p-1 hover:bg-gray-100 rounded">
-                      <MoreVertical size={20} style={{ color: colors.textSecondary }} />
-                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveDropdown(activeDropdown === job.id ? null : job.id);
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        <MoreVertical size={20} style={{ color: colors.textSecondary }} />
+                      </button>
+
+                      {activeDropdown === job.id && (
+                        <div
+                          className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-10 py-1"
+                          style={{ border: `1px solid ${colors.border}` }}
+                        >
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onJobClick(job);
+                              setActiveDropdown(null);
+                            }}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
+                            style={{ color: colors.textPrimary }}
+                          >
+                            <Edit size={16} />
+                            Edit Job
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(`${window.location.origin}/jobs/${job.id}`);
+                              setActiveDropdown(null);
+                            }}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
+                            style={{ color: colors.textPrimary }}
+                          >
+                            <Copy size={16} />
+                            Copy Link
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Are you sure you want to delete this job?')) {
+                                handleDeleteJob(job.id);
+                              }
+                              setActiveDropdown(null);
+                            }}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
+                            style={{ color: colors.error }}
+                          >
+                            <Trash2 size={16} />
+                            Delete Job
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 

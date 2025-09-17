@@ -47,14 +47,27 @@ app.use('/api/webhooks', webhookRoutes);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limiting
+// Rate limiting - adjusted for development
 const limiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // 5 jobs per hour per IP
-  message: 'Too many job postings from this IP, please try again later.'
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: config.NODE_ENV === 'development' ? 100 : 20, // 100 requests per 15 min in dev, 20 in production
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (req) => {
+    // Skip rate limiting for GET requests in development
+    return config.NODE_ENV === 'development' && req.method === 'GET';
+  }
 });
 
-app.use('/api/jobs', limiter);
+// Apply rate limiting only to POST/PUT/DELETE operations
+app.use('/api/jobs', (req, res, next) => {
+  // Only apply rate limiting to state-changing operations
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return limiter(req, res, next);
+  }
+  return next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);

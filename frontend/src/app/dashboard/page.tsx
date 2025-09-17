@@ -8,6 +8,8 @@ import { Job, JobBoard } from '@/../../shared/types';
 import MyJobs from '@/components/MyJobs';
 import JobStats from '@/components/JobStats';
 import PostJobForm from '@/components/PostJobForm';
+import { useApi } from '@/hooks/useApi';
+import { PageLoader } from '@/components/ui/Loader';
 import {
   Briefcase, Plus, BarChart3, Clock, CheckCircle,
   AlertCircle, LogOut, User, Menu, X, Bell, Search,
@@ -18,46 +20,42 @@ import {
 export default function DashboardPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'jobs' | 'stats'>('dashboard');
-  const [userJobs, setUserJobs] = useState<Job[]>([]);
-  const [boardList, setBoardList] = useState<JobBoard[]>([]);
-  const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [notifications, setNotifications] = useState(3);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const { colors, typography, shadows, borderRadius } = BRAND_CONFIG;
+
+  // Use our optimized hooks for data fetching
+  const { data: userJobs, loading: jobsLoading } = useApi<Job[]>(
+    isAuthenticated ? '/api/jobs' : null,
+    { cache: true, cacheDuration: 60000 } // Cache for 1 minute
+  );
+
+  const { data: boardList, loading: boardsLoading } = useApi<JobBoard[]>(
+    isAuthenticated ? '/api/boards' : null,
+    { cache: true, cacheDuration: 300000 } // Cache for 5 minutes
+  );
+
+  const loading = jobsLoading || boardsLoading;
 
   useEffect(() => {
     const apiKey = localStorage.getItem('api_key');
     const email = localStorage.getItem('user_email') || '';
     const name = localStorage.getItem('user_name') || email.split('@')[0];
-    
+
     if (!apiKey) {
       router.push('/login');
     } else {
       setUserEmail(email);
       setUserName(name);
-      loadData();
+      setIsAuthenticated(true);
     }
   }, [router]);
-
-  const loadData = async () => {
-    try {
-      const [boardsData, jobsData] = await Promise.all([
-        boards.list(),
-        jobs.list()
-      ]);
-      setBoardList(boardsData);
-      setUserJobs(jobsData as Job[]);
-    } catch (err) {
-      console.error('Failed to load data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLogout = () => {
     localStorage.removeItem('api_key');
@@ -67,19 +65,20 @@ export default function DashboardPage() {
   };
 
   const getStats = () => {
-    const totalJobs = userJobs.length;
-    const completedJobs = userJobs.filter(job => job.status === 'completed').length;
-    const pendingJobs = userJobs.filter(job => job.status === 'pending' || job.status === 'posting').length;
-    const failedJobs = userJobs.filter(job => job.status === 'failed').length;
+    // Handle null/undefined userJobs
+    const jobs = userJobs || [];
+    const totalJobs = jobs.length;
+    const completedJobs = jobs.filter(job => job.status === 'completed').length;
+    const pendingJobs = jobs.filter(job => job.status === 'pending' || job.status === 'posting').length;
+    const failedJobs = jobs.filter(job => job.status === 'failed').length;
     const successRate = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0;
-    const totalPostings = userJobs.reduce((acc, job) => acc + (job.postings?.length || 0), 0);
-    const recentJobs = userJobs.slice(0, 5);
+    const totalPostings = jobs.reduce((acc, job) => acc + (job.postings?.length || 0), 0);
+    const recentJobs = jobs.slice(0, 5);
 
     return { totalJobs, completedJobs, pendingJobs, failedJobs, successRate, totalPostings, recentJobs };
   };
 
-  const stats = getStats();
-
+  // Check loading state before calling getStats
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: colors.background }}>
@@ -93,6 +92,9 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  // Now safe to call getStats after loading check
+  const stats = getStats();
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: colors.surface }}>
@@ -288,7 +290,7 @@ export default function DashboardPage() {
               {/* Quick Post Button - Only show on My Jobs tab */}
               {activeTab === 'jobs' && (
                 <button
-                  onClick={() => router.push('/post-job')}
+                  onClick={() => router.push('/job/new')}
                   className="flex items-center px-4 py-2 rounded-lg text-white transition-all transform hover:scale-105"
                   style={{
                     background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)`,
@@ -491,7 +493,7 @@ export default function DashboardPage() {
                           No jobs posted yet
                         </p>
                         <button
-                          onClick={() => router.push('/post-job')}
+                          onClick={() => router.push('/job/new')}
                           className="mt-4 px-4 py-2 rounded-lg text-white"
                           style={{
                             backgroundColor: colors.primary,
@@ -513,7 +515,7 @@ export default function DashboardPage() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <button
-                    onClick={() => router.push('/post-job')}
+                    onClick={() => router.push('/job/new')}
                     className="flex items-center p-4 rounded-lg border-2 border-dashed transition-all hover:shadow-md"
                     style={{
                       borderColor: colors.primary,
@@ -573,15 +575,15 @@ export default function DashboardPage() {
           )}
 
           {activeTab === 'jobs' && (
-            <MyJobs 
-              jobs={userJobs} 
+            <MyJobs
+              initialJobs={userJobs || []}
               onJobClick={(job) => router.push(`/job/${job.id}`)}
-              onPostNewJob={() => router.push('/post-job')}
+              onPostNewJob={() => router.push('/job/new')}
             />
           )}
 
           {activeTab === 'stats' && (
-            <JobStats jobs={userJobs} />
+            <JobStats jobs={userJobs || []} />
           )}
         </div>
       </main>

@@ -3,39 +3,51 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { BRAND_CONFIG } from '../../../../shared/constants';
-import { jobs } from '@/lib/api';
 import MyJobs from '@/components/MyJobs';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Job } from '../../../../shared/types';
+import { useApi } from '@/hooks/useApi';
+import { PageLoader } from '@/components/ui/Loader';
 
 export default function MyJobsPage() {
   const router = useRouter();
-  const [userJobs, setUserJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
   const { colors, typography, shadows } = BRAND_CONFIG;
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
-
-  const fetchJobs = async () => {
-    try {
-      setLoading(true);
-      const data = await jobs.list();
-      setUserJobs(data as Job[]);
-    } catch (error) {
-      console.error('Failed to fetch jobs:', error);
-    } finally {
-      setLoading(false);
+  // Use optimized API hook with explicit immediate flag
+  const { data: userJobs, loading, error, refetch } = useApi<Job[]>(
+    '/api/jobs',
+    {
+      immediate: true,
+      cache: false, // Disable cache for fresh data
+      cacheDuration: 60000,
+      retries: 1 // Add retry for better reliability
     }
-  };
+  );
 
-  if (loading) {
+  // Fallback empty array if data is null
+  const jobs = userJobs || [];
+
+  if (loading && !userJobs) {
+    return <PageLoader text="Loading your jobs..." />;
+  }
+
+  // Handle error state
+  if (error && !userJobs) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: colors.surface }}>
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent"
-             style={{ borderColor: colors.primary, borderTopColor: 'transparent' }} />
+        <div className="text-center">
+          <p className="text-lg mb-4" style={{ color: colors.error }}>
+            Failed to load jobs
+          </p>
+          <button
+            onClick={() => refetch()}
+            className="px-6 py-2 rounded-lg text-white"
+            style={{ backgroundColor: colors.primary }}
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -75,7 +87,7 @@ export default function MyJobsPage() {
       {/* Content */}
       <main className="max-w-7xl mx-auto p-6">
         <MyJobs
-          jobs={userJobs}
+          initialJobs={jobs}
           onJobClick={(job) => router.push(`/job/${job.id}`)}
           onPostNewJob={() => router.push('/job/new')}
         />

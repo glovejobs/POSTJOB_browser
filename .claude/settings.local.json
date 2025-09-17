@@ -34,7 +34,9 @@
       "Bash(npx playwright install:*)",
       "Bash(npx tsc:*)",
       "Bash(git push:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(cmd /c:*)",
+      "mcp__supabase__execute_sql"
     ],
     "deny": [],
     "ask": []
