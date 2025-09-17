@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: #f7f7f7; }
+    .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #00A699, #00857A); color: white; padding: 40px 30px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; }
+    .content { padding: 40px 30px; }
+    .success-banner { background: #e6f7f5; border-left: 4px solid #00A699; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .board-card { border: 2px solid #00A699; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+    .button { display: inline-block; padding: 14px 28px; background: #00A699; color: white !important; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 10px 5px; }
+    .footer { background: #f7f7f7; padding: 30px; text-align: center; font-size: 14px; color: #767676; }
+    .footer a { color: #00A699; text-decoration: none; }
+    .checkmark { color: #00A699; font-size: 48px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚀 Your Job is Now Live!</h1>
+    </div>
+
+    <div class="content">
+      <div class="success-banner">
+        <strong>Success!</strong> Your job posting is now live and accepting applications.
+      </div>
+
+      <div class="board-card">
+        <div class="checkmark">✓</div>
+        <h2 style="color: #484848; margin: 10px 0;">Published to {{boardName}}</h2>
+        <p style="color: #767676;">Your job is now visible to thousands of job seekers</p>
+      </div>
+
+      <h3 style="color: #484848;">Job Details:</h3>
+      <table style="width: 100%; margin: 20px 0;">
+        <tr>
+          <td style="padding: 8px 0; color: #767676;">Position:</td>
+          <td style="padding: 8px 0; color: #484848; font-weight: 600;">{{jobTitle}}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #767676;">Company:</td>
+          <td style="padding: 8px 0; color: #484848;">{{company}}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #767676;">Status:</td>
+          <td style="padding: 8px 0;">
+            <span style="background: #e6f7f5; color: #00A699; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">LIVE</span>
+          </td>
+        </tr>
+      </table>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="{{statusUrl}}" class="button">Track Applications</a>
+        <a href="{{jobUrl}}" class="button" style="background: #FF5A5F;">View Job Posting</a>
+      </div>
+
+      <div style="background: #f7f7f7; padding: 20px; border-radius: 8px; margin: 30px 0;">
+        <h4 style="color: #484848; margin-top: 0;">📊 What happens next?</h4>
+        <ul style="color: #767676; line-height: 1.8;">
+          <li>Applications will start coming in within 24-48 hours</li>
+          <li>You'll receive email notifications for new applications</li>
+          <li>Track all applications in your dashboard</li>
+          <li>Your job will remain active for 30 days</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>© {{brandName}}. All rights reserved.</p>
+      <p>
+        <a href="{{dashboardUrl}}">Dashboard</a> •
+        <a href="{{supportUrl}}">Support</a> •
+        <a href="{{unsubscribeUrl}}">Unsubscribe</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

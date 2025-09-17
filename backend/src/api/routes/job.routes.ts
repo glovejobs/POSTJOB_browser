@@ -5,6 +5,7 @@ import { authenticate, AuthRequest } from '../../middleware/auth.middleware';
 import { addJobToQueue } from '../../queue/job.queue';
 import { CreateJobRequest, JobStatusResponse } from '../../types';
 import { config } from '../../config/environment';
+import { emailService } from '../../services/email.service';
 
 const router = Router();
 const isStripeEnabled = config.STRIPE_SECRET_KEY && !config.STRIPE_SECRET_KEY.includes('test_123');
@@ -46,6 +47,25 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
         status: 'draft' // Start as draft until boards are selected
       }
     });
+
+    // Send email notification
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (user?.email) {
+        await emailService.sendJobCreatedEmail(user.email, {
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          location: job.location
+        });
+      }
+    } catch (emailError) {
+      console.error('Failed to send job created email:', emailError);
+      // Don't fail the request if email fails
+    }
 
     return res.status(201).json({
       id: job.id,

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: #f7f7f7; }
+    .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #00A699, #00857A); color: white; padding: 40px 30px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; }
+    .content { padding: 40px 30px; }
+    .receipt { background: #f7f7f7; border-radius: 8px; padding: 25px; margin: 20px 0; }
+    .receipt-header { border-bottom: 2px solid #e0e0e0; padding-bottom: 15px; margin-bottom: 15px; }
+    .receipt-row { display: flex; justify-content: space-between; padding: 10px 0; }
+    .total-row { border-top: 2px solid #484848; margin-top: 15px; padding-top: 15px; font-size: 18px; font-weight: 600; }
+    .button { display: inline-block; padding: 14px 28px; background: #00A699; color: white !important; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 10px 5px; }
+    .footer { background: #f7f7f7; padding: 30px; text-align: center; font-size: 14px; color: #767676; }
+    .footer a { color: #00A699; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>💳 Payment Confirmed</h1>
+    </div>
+
+    <div class="content">
+      <p style="font-size: 16px; color: #484848;">
+        Thank you for your payment! Your job posting is being processed and will be live shortly.
+      </p>
+
+      <div class="receipt">
+        <div class="receipt-header">
+          <h3 style="margin: 0; color: #484848;">Payment Receipt</h3>
+          <p style="margin: 5px 0; color: #767676; font-size: 14px;">Receipt #: {{receiptNumber}}</p>
+          <p style="margin: 5px 0; color: #767676; font-size: 14px;">Date: {{formatDate paymentDate}}</p>
+        </div>
+
+        <div class="receipt-row">
+          <span style="color: #767676;">Job Posting:</span>
+          <span style="color: #484848; font-weight: 600;">{{jobTitle}}</span>
+        </div>
+
+        <div class="receipt-row">
+          <span style="color: #767676;">Company:</span>
+          <span style="color: #484848;">{{company}}</span>
+        </div>
+
+        <div class="receipt-row">
+          <span style="color: #767676;">Boards Selected:</span>
+          <span style="color: #484848;">{{boardCount}} board(s)</span>
+        </div>
+
+        <div class="receipt-row">
+          <span style="color: #767676;">Duration:</span>
+          <span style="color: #484848;">30 days</span>
+        </div>
+
+        <div class="receipt-row total-row">
+          <span style="color: #484848;">Total Paid:</span>
+          <span style="color: #00A699;">${{amount}}</span>
+        </div>
+      </div>
+
+      <div style="background: #e6f7f5; border-left: 4px solid #00A699; padding: 15px; margin: 25px 0; border-radius: 4px;">
+        <strong style="color: #00A699;">Processing your job posting...</strong>
+        <p style="margin: 10px 0 0; color: #767676;">
+          Your job will be posted to the selected boards within the next few minutes.
+          You'll receive a confirmation email once your job is live.
+        </p>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="{{statusUrl}}" class="button">Track Posting Status</a>
+        <a href="{{dashboardUrl}}" class="button" style="background: #FF5A5F;">Go to Dashboard</a>
+      </div>
+
+      <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #e0e0e0;">
+        <p style="color: #767676; font-size: 14px;">
+          <strong>Need help?</strong> Our support team is here to assist you.
+          Reply to this email or visit our <a href="{{supportUrl}}" style="color: #00A699;">Help Center</a>.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>© {{brandName}}. All rights reserved.</p>
+      <p style="font-size: 12px; color: #999;">
+        This is a transactional receipt for your records. Please keep it for your reference.
+      </p>
+      <p>
+        <a href="{{dashboardUrl}}">Dashboard</a> •
+        <a href="{{supportUrl}}">Support</a> •
+        <a href="{{privacyUrl}}">Privacy Policy</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

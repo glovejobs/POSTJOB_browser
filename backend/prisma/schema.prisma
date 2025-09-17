@@ -14,8 +14,14 @@ model User {
   id                    String    @id @default(uuid())
   email                 String    @unique
   apiKey                String    @unique @map("api_key")
-  password              String?   // For users who set passwords
-  fullName              String?   @map("full_name")
+  password              String    @default("") // Required with default for existing records
+  name                  String?   @map("full_name")
+  company               String?
+  phone                 String?
+  website               String?
+  bio                   String?
+  avatar                String?
+  emailPreferences      String?   @map("email_preferences") // JSON stored as string
   stripeCustomerId      String?   @map("stripe_customer_id")
   resetPasswordToken    String?   @unique @map("reset_password_token")
   resetPasswordExpires  DateTime? @map("reset_password_expires")
@@ -64,6 +70,7 @@ model Job {
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   postings     JobPosting[]
+  applications Application[]
 
   @@index([userId])
   @@index([status])
@@ -88,4 +95,43 @@ model JobPosting {
   @@index([boardId])
   @@index([status])
   @@map("job_postings")
+}
+
+model Application {
+  id              String   @id @default(uuid())
+  jobId           String   @map("job_id")
+  candidateName   String   @map("candidate_name")
+  candidateEmail  String   @map("candidate_email")
+  candidatePhone  String?  @map("candidate_phone")
+  resumeUrl       String?  @map("resume_url")
+  coverLetter     String?  @map("cover_letter")
+  portfolio       String?
+  linkedIn        String?  @map("linkedin_url")
+  status          String   @default("new") // new, screening, interview, rejected, hired
+  score           Int?     // 0-100 application score
+  notes           String?  // Internal notes about the applicant
+  appliedAt       DateTime @default(now()) @map("applied_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  communications  ApplicationCommunication[]
+
+  @@index([jobId])
+  @@index([status])
+  @@index([candidateEmail])
+  @@map("applications")
+}
+
+model ApplicationCommunication {
+  id            String   @id @default(uuid())
+  applicationId String   @map("application_id")
+  subject       String
+  message       String
+  direction     String   // inbound, outbound
+  sentAt        DateTime @default(now()) @map("sent_at")
+
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@map("application_communications")
 }

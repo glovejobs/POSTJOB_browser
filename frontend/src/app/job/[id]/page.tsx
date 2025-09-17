@@ -8,7 +8,7 @@ import { jobs, boards } from '@/lib/api';
 import {
   ArrowLeft, Check, Edit, MapPin, Building, Clock,
   DollarSign, Send, Copy, Facebook, Twitter, Linkedin,
-  Link as LinkIcon, Mail, MoreVertical, Plus, Download
+  Link as LinkIcon, Mail, MoreVertical, Plus, Download, Users
 } from 'lucide-react';
 
 type TabType = 'details' | 'application' | 'screening' | 'hiring' | 'posting';
@@ -126,22 +126,62 @@ export default function JobDetailPage() {
                   {isOpen ? 'Open' : isDraft ? 'Draft' : job.status}
                 </span>
               </div>
-              
+
               <div className="flex items-center gap-2 text-sm">
                 <span style={{ color: colors.textSecondary, fontFamily: typography.fontFamily.primary }}>Job boards:</span>
                 <span style={{ color: colors.textPrimary, fontFamily: typography.fontFamily.primary }}>In review</span>
               </div>
 
-              <button
-                className="px-4 py-2 rounded-lg font-medium"
-                style={{
-                  backgroundColor: colors.secondary,
-                  color: 'white',
-                  fontFamily: typography.fontFamily.primary
-                }}
-              >
-                View applications
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => router.push(`/job/${job.id}/posting-status`)}
+                  className="px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all hover:shadow-md"
+                  style={{
+                    backgroundColor: colors.secondary,
+                    color: 'white',
+                    fontFamily: typography.fontFamily.primary
+                  }}
+                >
+                  <Clock size={16} />
+                  Posting Status
+                </button>
+                <button
+                  onClick={() => router.push(`/job/${job.id}/applications`)}
+                  className="px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all hover:shadow-md"
+                  style={{
+                    backgroundColor: colors.primary,
+                    color: 'white',
+                    fontFamily: typography.fontFamily.primary
+                  }}
+                >
+                  <Users size={16} />
+                  Applications
+                </button>
+                <button
+                  onClick={() => router.push(`/job/${job.id}/edit`)}
+                  className="px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all hover:shadow-md"
+                  style={{
+                    backgroundColor: colors.background,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.textPrimary,
+                    fontFamily: typography.fontFamily.primary
+                  }}
+                >
+                  <Edit size={16} />
+                  Edit
+                </button>
+
+                <button
+                  className="px-4 py-2 rounded-lg font-medium"
+                  style={{
+                    backgroundColor: colors.secondary,
+                    color: 'white',
+                    fontFamily: typography.fontFamily.primary
+                  }}
+                >
+                  View applications
+                </button>
+              </div>
             </div>
           </div>
 

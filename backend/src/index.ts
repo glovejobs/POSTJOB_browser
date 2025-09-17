@@ -14,6 +14,13 @@ import authRoutes from './api/routes/auth.routes';
 import jobRoutes from './api/routes/job.routes';
 import boardRoutes from './api/routes/board.routes';
 import webhookRoutes from './api/routes/webhook.routes';
+import userRoutes from './api/routes/user.routes';
+import applicationRoutes from './api/routes/application.routes';
+import analyticsRoutes from './api/routes/analytics.routes';
+import searchRoutes from './api/routes/search.routes';
+import postingRoutes from './api/routes/posting.routes';
+import paymentRoutes from './api/routes/payment.routes';
+import publicRoutes from './api/routes/public.routes';
 
 // Import queue
 import { initQueue } from './queue/job.queue';
@@ -73,6 +80,14 @@ app.use('/api/jobs', (req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/boards', boardRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/applications', applicationRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/posting', postingRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/jobs', publicRoutes);
+app.use('/api/applications', publicRoutes);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {

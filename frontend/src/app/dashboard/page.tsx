@@ -12,7 +12,7 @@ import { useApi } from '@/hooks/useApi';
 import { PageLoader } from '@/components/ui/Loader';
 import {
   Briefcase, Plus, BarChart3, Clock, CheckCircle,
-  AlertCircle, LogOut, User, Menu, X, Bell, Search,
+  AlertCircle, LogOut, User, Menu, X, Bell, Search as SearchIcon,
   TrendingUp, Users, FileText, ChevronRight, Home,
   Settings, HelpCircle, Calendar, Filter, Download
 } from 'lucide-react';
@@ -225,13 +225,24 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={handleLogout}
-                className="p-2 rounded-lg transition-all duration-200 hover:bg-red-50 hover:text-red-600"
-                style={{ color: colors.gray }}
-              >
-                <LogOut size={18} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => router.push('/profile')}
+                  className="p-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
+                  style={{ color: colors.gray }}
+                  title="Profile Settings"
+                >
+                  <Settings size={18} />
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 rounded-lg transition-all duration-200 hover:bg-red-50 hover:text-red-600"
+                  style={{ color: colors.gray }}
+                  title="Logout"
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -263,18 +274,16 @@ export default function DashboardPage() {
             {/* Header Actions */}
             <div className="flex items-center space-x-3">
               {/* Search Bar */}
-              <div className="hidden md:flex items-center px-4 py-2 rounded-lg"
-                   style={{ backgroundColor: colors.surface, minWidth: '250px' }}>
-                <Search size={18} style={{ color: colors.gray }} />
-                <input
-                  type="text"
-                  placeholder="Search jobs..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="ml-2 bg-transparent outline-none flex-1 text-sm"
-                  style={{ color: colors.textPrimary }}
-                />
-              </div>
+              <button
+                onClick={() => router.push('/search')}
+                className="hidden md:flex items-center px-4 py-2 rounded-lg transition-colors hover:opacity-80"
+                style={{ backgroundColor: colors.surface, minWidth: '250px' }}
+              >
+                <SearchIcon size={18} style={{ color: colors.gray }} />
+                <span className="ml-2 text-sm" style={{ color: colors.textSecondary }}>
+                  Search jobs...
+                </span>
+              </button>
 
               {/* Notifications */}
               <button className="relative p-2 rounded-lg hover:bg-gray-50 transition-colors">
@@ -552,7 +561,7 @@ export default function DashboardPage() {
                   </button>
 
                   <button
-                    onClick={() => setActiveTab('stats')}
+                    onClick={() => router.push('/analytics')}
                     className="flex items-center p-4 rounded-lg border-2 border-dashed transition-all hover:shadow-md"
                     style={{
                       borderColor: colors.info,

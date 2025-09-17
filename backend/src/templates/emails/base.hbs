@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{subject}}</title>
+  <style>
+    /* Reset styles */
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+
+    /* Base styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f7f7f7;
+      color: #484848;
+    }
+
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #FF5A5F 0%, #FF385D 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .button {
+      display: inline-block;
+      padding: 14px 28px;
+      background: #FF5A5F;
+      color: white !important;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      margin: 20px 0;
+    }
+
+    .button.secondary {
+      background: #00A699;
+    }
+
+    .footer {
+      background-color: #f7f7f7;
+      padding: 30px;
+      text-align: center;
+      font-size: 14px;
+      color: #767676;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .footer a {
+      color: #00A699;
+      text-decoration: none;
+    }
+
+    .info-box {
+      background: #f7f7f7;
+      border-left: 4px solid #FF5A5F;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+
+    .success-box {
+      border-left-color: #00A699;
+    }
+
+    .warning-box {
+      border-left-color: #FFB400;
+    }
+
+    .error-box {
+      border-left-color: #FF5A5F;
+    }
+
+    .job-card {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 15px 0;
+    }
+
+    .job-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #484848;
+      margin: 0 0 10px 0;
+    }
+
+    .job-meta {
+      color: #767676;
+      font-size: 14px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-success {
+      background: #e6f7f5;
+      color: #00A699;
+    }
+
+    .status-pending {
+      background: #fff7e6;
+      color: #FFB400;
+    }
+
+    .status-failed {
+      background: #ffe6e6;
+      color: #FF5A5F;
+    }
+  </style>
+</head>
+<body>
+  <div style="padding: 20px;">
+    <div class="email-container">
+      {{> header}}
+      <div class="content">
+        {{> content}}
+      </div>
+      {{> footer}}
+    </div>
+  </div>
+</body>
+</html>

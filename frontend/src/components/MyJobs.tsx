@@ -314,7 +314,7 @@ export default function MyJobs({ initialJobs = [], onJobClick, onPostNewJob }: M
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              onJobClick(job);
+                              window.location.href = `/job/${job.id}/edit`;
                               setActiveDropdown(null);
                             }}
                             className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2"

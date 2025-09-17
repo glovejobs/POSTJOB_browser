@@ -1,11 +1,20 @@
 import nodemailer from 'nodemailer';
 import { config } from '../config/environment';
+import path from 'path';
+import fs from 'fs/promises';
 
 interface EmailOptions {
   to: string;
   subject: string;
   html: string;
   text?: string;
+}
+
+interface JobEmailData {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
 }
 
 class EmailService {
@@ -282,6 +291,214 @@ class EmailService {
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  async sendJobCreatedEmail(email: string, jobData: JobEmailData): Promise<void> {
+    const templatePath = path.join(__dirname, '..', 'templates', 'emails', 'job-created.hbs');
+    let html: string;
+
+    try {
+      // Try to load template file
+      html = await fs.readFile(templatePath, 'utf-8');
+      // Replace template variables
+      html = html
+        .replace(/\{\{jobTitle\}\}/g, jobData.title)
+        .replace(/\{\{company\}\}/g, jobData.company)
+        .replace(/\{\{location\}\}/g, jobData.location)
+        .replace(/\{\{jobUrl\}\}/g, `${config.FRONTEND_URL}/job/${jobData.id}`)
+        .replace(/\{\{editUrl\}\}/g, `${config.FRONTEND_URL}/job/${jobData.id}/edit`)
+        .replace(/\{\{dashboardUrl\}\}/g, `${config.FRONTEND_URL}/dashboard`)
+        .replace(/\{\{brandName\}\}/g, 'PostJob')
+        .replace(/\{\{supportUrl\}\}/g, `${config.FRONTEND_URL}/support`)
+        .replace(/\{\{unsubscribeUrl\}\}/g, `${config.FRONTEND_URL}/unsubscribe`);
+    } catch (error) {
+      // Fallback to simple template if file doesn't exist
+      html = `
+        <h2>Job Created Successfully!</h2>
+        <p>Your job posting "${jobData.title}" at ${jobData.company} has been created.</p>
+        <p><a href="${config.FRONTEND_URL}/job/${jobData.id}">View Job</a></p>
+      `;
+    }
+
+    await this.sendEmail({
+      to: email,
+      subject: `Job Created: ${jobData.title}`,
+      html
+    });
+  }
+
+  async sendJobPostedEmail(email: string, jobData: JobEmailData, boardName: string): Promise<void> {
+    const templatePath = path.join(__dirname, '..', 'templates', 'emails', 'job-posted.hbs');
+    let html: string;
+
+    try {
+      html = await fs.readFile(templatePath, 'utf-8');
+      html = html
+        .replace(/\{\{jobTitle\}\}/g, jobData.title)
+        .replace(/\{\{company\}\}/g, jobData.company)
+        .replace(/\{\{boardName\}\}/g, boardName)
+        .replace(/\{\{jobUrl\}\}/g, `${config.FRONTEND_URL}/job/${jobData.id}`)
+        .replace(/\{\{statusUrl\}\}/g, `${config.FRONTEND_URL}/job/${jobData.id}/status`)
+        .replace(/\{\{dashboardUrl\}\}/g, `${config.FRONTEND_URL}/dashboard`)
+        .replace(/\{\{brandName\}\}/g, 'PostJob')
+        .replace(/\{\{supportUrl\}\}/g, `${config.FRONTEND_URL}/support`)
+        .replace(/\{\{unsubscribeUrl\}\}/g, `${config.FRONTEND_URL}/unsubscribe`);
+    } catch (error) {
+      html = `
+        <h2>Job Posted Successfully!</h2>
+        <p>Your job "${jobData.title}" has been posted to ${boardName}.</p>
+        <p><a href="${config.FRONTEND_URL}/job/${jobData.id}/status">View Status</a></p>
+      `;
+    }
+
+    await this.sendEmail({
+      to: email,
+      subject: `Your Job is Now Live on ${boardName}!`,
+      html
+    });
+  }
+
+  async sendPaymentConfirmationEmail(email: string, jobData: JobEmailData, amount: number): Promise<void> {
+    const templatePath = path.join(__dirname, '..', 'templates', 'emails', 'payment-confirmation.hbs');
+    let html: string;
+
+    try {
+      html = await fs.readFile(templatePath, 'utf-8');
+      html = html
+        .replace(/\{\{jobTitle\}\}/g, jobData.title)
+        .replace(/\{\{company\}\}/g, jobData.company)
+        .replace(/\{\{amount\}\}/g, (amount / 100).toFixed(2))
+        .replace(/\{\{receiptNumber\}\}/g, `RCP-${Date.now()}`)
+        .replace(/\{\{paymentDate\}\}/g, new Date().toISOString())
+        .replace(/\{\{formatDate.*?\}\}/g, new Date().toLocaleDateString())
+        .replace(/\{\{statusUrl\}\}/g, `${config.FRONTEND_URL}/job/${jobData.id}/status`)
+        .replace(/\{\{dashboardUrl\}\}/g, `${config.FRONTEND_URL}/dashboard`)
+        .replace(/\{\{brandName\}\}/g, 'PostJob')
+        .replace(/\{\{supportUrl\}\}/g, `${config.FRONTEND_URL}/support`)
+        .replace(/\{\{privacyUrl\}\}/g, `${config.FRONTEND_URL}/privacy`);
+    } catch (error) {
+      html = `
+        <h2>Payment Confirmed</h2>
+        <p>Your payment of $${(amount / 100).toFixed(2)} for "${jobData.title}" has been processed.</p>
+        <p><a href="${config.FRONTEND_URL}/job/${jobData.id}/status">Track Status</a></p>
+      `;
+    }
+
+    await this.sendEmail({
+      to: email,
+      subject: 'Payment Confirmed - Your Job is Being Posted',
+      html
+    });
+  }
+
+  async sendPasswordChangedEmail(email: string, name: string): Promise<void> {
+    const subject = 'Password Changed - PostJob';
+    const html = `
+      <h1>Password Changed Successfully</h1>
+      <p>Hi ${name},</p>
+      <p>Your PostJob account password has been successfully changed.</p>
+      <p>If you didn't make this change, please contact our support team immediately.</p>
+      <p>Best regards,<br>The PostJob Team</p>
+    `;
+
+    await this.sendEmail({ to: email, subject, html });
+  }
+
+  async sendAccountDeletedEmail(email: string, name: string): Promise<void> {
+    const subject = 'Account Deleted - PostJob';
+    const html = `
+      <h1>Goodbye, ${name}</h1>
+      <p>Your PostJob account has been successfully deleted.</p>
+      <p>We're sorry to see you go. If you change your mind, you're always welcome back!</p>
+      <p>All your data has been permanently removed from our systems.</p>
+      <p>Best regards,<br>The PostJob Team</p>
+    `;
+
+    await this.sendEmail({ to: email, subject, html });
+  }
+
+  async sendApplicationConfirmation(email: string, data: {
+    candidateName: string;
+    jobTitle: string;
+    company: string;
+  }): Promise<void> {
+    const subject = `Application Received - ${data.jobTitle} at ${data.company}`;
+    const html = `
+      <h1>Thank you for applying, ${data.candidateName}!</h1>
+      <p>We've received your application for the position of <strong>${data.jobTitle}</strong> at <strong>${data.company}</strong>.</p>
+      <p>The hiring team will review your application and get back to you soon.</p>
+      <p>Good luck!</p>
+      <p>Best regards,<br>The ${data.company} Team</p>
+    `;
+
+    await this.sendEmail({ to: email, subject, html });
+  }
+
+  async sendNewApplicationNotification(email: string, data: {
+    jobTitle: string;
+    candidateName: string;
+    candidateEmail: string;
+    applicationId: string;
+  }): Promise<void> {
+    const subject = `New Application - ${data.jobTitle}`;
+    const html = `
+      <h1>New Application Received</h1>
+      <p>You have a new application for <strong>${data.jobTitle}</strong>.</p>
+      <p><strong>Candidate:</strong> ${data.candidateName}</p>
+      <p><strong>Email:</strong> ${data.candidateEmail}</p>
+      <p>View the application in your dashboard to review and respond.</p>
+      <p>Application ID: ${data.applicationId}</p>
+    `;
+
+    await this.sendEmail({ to: email, subject, html });
+  }
+
+  async sendApplicationStatusUpdate(email: string, data: {
+    candidateName: string;
+    jobTitle: string;
+    company: string;
+    status: string;
+  }): Promise<void> {
+    const statusMessages: Record<string, string> = {
+      interview: 'Congratulations! You have been selected for an interview.',
+      rejected: 'After careful consideration, we have decided to move forward with other candidates.',
+      hired: 'Congratulations! We are pleased to offer you the position.'
+    };
+
+    const subject = `Application Update - ${data.jobTitle} at ${data.company}`;
+    const html = `
+      <h1>Application Status Update</h1>
+      <p>Dear ${data.candidateName},</p>
+      <p>We have an update on your application for <strong>${data.jobTitle}</strong> at <strong>${data.company}</strong>.</p>
+      <p>${statusMessages[data.status] || 'Your application status has been updated.'}</p>
+      ${data.status === 'interview' ? '<p>We will contact you soon with more details about the interview process.</p>' : ''}
+      ${data.status === 'rejected' ? '<p>We appreciate your interest and wish you the best in your job search.</p>' : ''}
+      ${data.status === 'hired' ? '<p>We will contact you soon with next steps and offer details.</p>' : ''}
+      <p>Best regards,<br>The ${data.company} Team</p>
+    `;
+
+    await this.sendEmail({ to: email, subject, html });
+  }
+
+  async sendApplicantCommunication(email: string, data: {
+    candidateName: string;
+    subject: string;
+    message: string;
+    jobTitle: string;
+    company: string;
+  }): Promise<void> {
+    const subject = `${data.company} - ${data.subject}`;
+    const html = `
+      <h1>Message from ${data.company}</h1>
+      <p>Dear ${data.candidateName},</p>
+      <p>You have received a message regarding your application for <strong>${data.jobTitle}</strong>:</p>
+      <div style="border: 1px solid #ddd; padding: 15px; margin: 20px 0; background: #f9f9f9;">
+        ${data.message.replace(/\n/g, '<br>')}
+      </div>
+      <p>Best regards,<br>The ${data.company} Team</p>
+    `;
+
+    await this.sendEmail({ to: email, subject, html });
   }
 }
 

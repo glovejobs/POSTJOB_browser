@@ -69,7 +69,10 @@ async function main() {
   // Seed job boards
   for (const board of jobBoards) {
     await prisma.jobBoard.create({
-      data: board
+      data: {
+        ...board,
+        selectors: JSON.stringify(board.selectors)
+      }
     });
   }
   

@@ -1,0 +1,245 @@
+/* Mobile-First Responsive Styles */
+
+/* Base mobile styles */
+@media screen and (max-width: 767px) {
+  /* Typography adjustments */
+  html {
+    font-size: 14px;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+  }
+
+  /* Layout adjustments */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Form improvements */
+  input,
+  textarea,
+  select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    min-height: 44px; /* iOS tap target */
+  }
+
+  /* Button improvements */
+  button,
+  .btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 12px 16px;
+  }
+
+  /* Card spacing */
+  .card {
+    margin-bottom: 1rem;
+  }
+
+  /* Table responsiveness */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* Hide desktop-only elements */
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Bottom spacing for fixed bottom nav */
+  .pb-safe {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 60px);
+  }
+
+  /* Modal adjustments */
+  .modal {
+    margin: 0;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  /* Dropdown improvements */
+  .dropdown-menu {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    border-radius: 16px 16px 0 0;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
+
+/* Tablet styles */
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  /* Grid adjustments */
+  .grid-cols-1 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Card layouts */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Touch device specific styles */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  .hover\:bg-gray-100:hover {
+    background-color: transparent;
+  }
+
+  /* Add active states instead */
+  button:active,
+  a:active {
+    opacity: 0.8;
+    transform: scale(0.98);
+  }
+
+  /* Larger touch targets */
+  .clickable {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  /* Disable text selection on interactive elements */
+  button,
+  a,
+  .interactive {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Landscape mobile */
+@media screen and (max-width: 767px) and (orientation: landscape) {
+  /* Reduce vertical spacing */
+  .py-8 {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  /* Compact header */
+  header {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  /* Hide less important elements */
+  .landscape-hide {
+    display: none;
+  }
+}
+
+/* High resolution displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Thinner borders for retina */
+  .border {
+    border-width: 0.5px;
+  }
+}
+
+/* Dark mode mobile adjustments */
+@media (prefers-color-scheme: dark) {
+  @media screen and (max-width: 767px) {
+    /* Higher contrast for mobile dark mode */
+    .bg-gray-800 {
+      background-color: #000;
+    }
+
+    .text-gray-300 {
+      color: #e5e5e5;
+    }
+  }
+}
+
+/* Accessibility improvements for mobile */
+@media screen and (max-width: 767px) {
+  /* Focus indicators */
+  *:focus {
+    outline: 3px solid #FF5A5F;
+    outline-offset: 2px;
+  }
+
+  /* Skip to content link */
+  .skip-to-content {
+    position: absolute;
+    top: -100px;
+    left: 0;
+    background: #FF5A5F;
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    z-index: 100;
+  }
+
+  .skip-to-content:focus {
+    top: 0;
+  }
+}
+
+/* Performance optimizations */
+@media screen and (max-width: 767px) {
+  /* Reduce animations on mobile */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Hardware acceleration for smooth scrolling */
+  .scroll-container {
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+  }
+}
+
+/* Print styles */
+@media print {
+  /* Hide navigation and non-essential elements */
+  nav,
+  .no-print,
+  button,
+  .mobile-nav {
+    display: none !important;
+  }
+
+  /* Ensure content fits on page */
+  body {
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+
+  /* Prevent page breaks inside elements */
+  .card,
+  table,
+  blockquote {
+    page-break-inside: avoid;
+  }
+}
