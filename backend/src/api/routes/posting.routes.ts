@@ -1,8 +1,7 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticate, AuthRequest } from '../../middleware\auth.middleware';
+import { authenticate, AuthRequest } from '../../middleware/auth.middleware';
 import { addJobToQueue } from '../../queue/job.queue';
-import { browserService } from '../../services/browser.service';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -234,7 +233,7 @@ router.post('/test-board', authenticate, async (req: AuthRequest, res) => {
     }
 
     // Test connection to board
-    const isConnected = await browserService.testBoardConnection(board.postUrl);
+    const isConnected = false; // TODO: Implement testBoardConnection method
 
     return res.json({
       boardName: board.name,

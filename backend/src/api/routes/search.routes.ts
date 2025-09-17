@@ -5,24 +5,7 @@ import { authenticate, AuthRequest } from '../../middleware/auth.middleware';
 const router = Router();
 const prisma = new PrismaClient();
 
-interface SearchFilters {
-  query?: string;
-  status?: string[];
-  employmentType?: string[];
-  location?: string[];
-  salaryMin?: number;
-  salaryMax?: number;
-  company?: string[];
-  dateFrom?: Date;
-  dateTo?: Date;
-  hasApplications?: boolean;
-  boardId?: string;
-}
-
-interface SortOptions {
-  field: 'createdAt' | 'title' | 'company' | 'applications' | 'salary';
-  order: 'asc' | 'desc';
-}
+// SearchFilters and SortOptions interfaces removed as they're not used
 
 // GET /api/search/jobs - Advanced job search
 router.get('/jobs', authenticate, async (req: AuthRequest, res) => {
@@ -56,10 +39,10 @@ router.get('/jobs', authenticate, async (req: AuthRequest, res) => {
     // Text search
     if (q) {
       where.OR = [
-        { title: { contains: q as string, mode: 'insensitive' } },
-        { description: { contains: q as string, mode: 'insensitive' } },
-        { company: { contains: q as string, mode: 'insensitive' } },
-        { location: { contains: q as string, mode: 'insensitive' } }
+        { title: { contains: q as string } },
+        { description: { contains: q as string } },
+        { company: { contains: q as string } },
+        { location: { contains: q as string } }
       ];
     }
 
@@ -251,9 +234,9 @@ router.get('/applications', authenticate, async (req: AuthRequest, res) => {
     // Text search
     if (q) {
       where.OR = [
-        { candidateName: { contains: q as string, mode: 'insensitive' } },
-        { candidateEmail: { contains: q as string, mode: 'insensitive' } },
-        { coverLetter: { contains: q as string, mode: 'insensitive' } }
+        { candidateName: { contains: q as string } },
+        { candidateEmail: { contains: q as string } },
+        { coverLetter: { contains: q as string } }
       ];
     }
 
@@ -546,7 +529,7 @@ router.get('/suggestions', authenticate, async (req: AuthRequest, res) => {
       const jobTitles = await prisma.job.findMany({
         where: {
           userId,
-          title: { contains: query, mode: 'insensitive' }
+          title: { contains: query }
         },
         select: { title: true },
         distinct: ['title'],
@@ -558,7 +541,7 @@ router.get('/suggestions', authenticate, async (req: AuthRequest, res) => {
       const companies = await prisma.job.findMany({
         where: {
           userId,
-          company: { contains: query, mode: 'insensitive' }
+          company: { contains: query }
         },
         select: { company: true },
         distinct: ['company'],
@@ -572,7 +555,7 @@ router.get('/suggestions', authenticate, async (req: AuthRequest, res) => {
       const candidates = await prisma.application.findMany({
         where: {
           job: { userId },
-          candidateName: { contains: query, mode: 'insensitive' }
+          candidateName: { contains: query }
         },
         select: { candidateName: true },
         distinct: ['candidateName'],

@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 import prisma from '../../database/prisma';
 import { authenticate, AuthRequest } from '../../middleware/auth.middleware';
 import { emailService } from '../../services/email.service';
-import { config } from '../../config/environment';
 
 const router = Router();
 
@@ -295,10 +294,10 @@ router.get('/stats', authenticate, async (req: AuthRequest, res) => {
 
     // Calculate totals
     const stats = {
-      totalJobs: jobStats.reduce((acc, stat) => acc + stat._count, 0),
-      draftJobs: jobStats.find(s => s.status === 'draft')?._count || 0,
-      publishedJobs: jobStats.find(s => s.status === 'completed')?._count || 0,
-      pendingJobs: jobStats.find(s => s.status === 'pending')?._count || 0,
+      totalJobs: jobStats.reduce((acc: number, stat: any) => acc + stat._count, 0),
+      draftJobs: jobStats.find((s: any) => s.status === 'draft')?._count || 0,
+      publishedJobs: jobStats.find((s: any) => s.status === 'completed')?._count || 0,
+      pendingJobs: jobStats.find((s: any) => s.status === 'pending')?._count || 0,
       recentActivity
     };
 

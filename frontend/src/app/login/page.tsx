@@ -22,25 +22,68 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+
+    console.log('Form submitted - preventing default');
+    console.log('Email:', email);
+    console.log('IsSignUp:', isSignUp);
+
     setError(null);
     setLoading(true);
 
     try {
       if (isSignUp) {
         // Register new user
+        console.log('Attempting registration for:', email);
         const registerResult = await auth.register(email);
-        localStorage.setItem('api_key', registerResult.apiKey);
-        localStorage.setItem('user_email', email);
-        localStorage.setItem('user_name', fullName);
+        console.log('Registration result:', registerResult);
+
+        if (registerResult && registerResult.apiKey) {
+          localStorage.setItem('api_key', registerResult.apiKey);
+          localStorage.setItem('user_email', email);
+          localStorage.setItem('user_name', fullName);
+          console.log('Registration successful, navigating to dashboard...');
+
+          // Force navigation with a fallback
+          await router.push('/dashboard');
+
+          // Fallback: if router.push doesn't work, use window.location
+          setTimeout(() => {
+            if (window.location.pathname !== '/dashboard') {
+              console.log('Router push failed, using window.location');
+              window.location.href = '/dashboard';
+            }
+          }, 1000);
+        } else {
+          throw new Error('Invalid registration response');
+        }
       } else {
         // Login existing user
+        console.log('Attempting login for:', email);
         const loginResult = await auth.login(email);
-        localStorage.setItem('api_key', loginResult.apiKey);
-        localStorage.setItem('user_email', email);
-      }
+        console.log('Login result:', loginResult);
 
-      router.push('/dashboard');
+        if (loginResult && loginResult.apiKey) {
+          localStorage.setItem('api_key', loginResult.apiKey);
+          localStorage.setItem('user_email', email);
+          console.log('Login successful, navigating to dashboard...');
+
+          // Force navigation with a fallback
+          await router.push('/dashboard');
+
+          // Fallback: if router.push doesn't work, use window.location
+          setTimeout(() => {
+            if (window.location.pathname !== '/dashboard') {
+              console.log('Router push failed, using window.location');
+              window.location.href = '/dashboard';
+            }
+          }, 1000);
+        } else {
+          throw new Error('Invalid login response');
+        }
+      }
     } catch (err: any) {
+      console.error('Login error:', err);
       if (err?.response?.status === 404 && !isSignUp) {
         setError('No account found with this email. Please sign up first.');
       } else if (err?.response?.status === 400 && err?.response?.data?.error === 'User already exists' && isSignUp) {

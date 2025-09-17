@@ -5,57 +5,57 @@ export const BRAND_CONFIG = {
   name: 'PostJob',
   tagline: 'Automate Your Job Posting Workflow',
 
-  // Airbnb-inspired color palette
+  // Professional minimal color palette
   colors: {
-    // Primary colors
-    primary: '#FF5A5F',      // Rausch - Airbnb's signature coral
-    primaryDark: '#E84C51',  // Darker shade for hover states
-    primaryLight: '#FF7479', // Lighter shade for backgrounds
+    // Primary colors - Dark slate for professional look
+    primary: '#0F172A',      // Slate-900 - Professional dark blue
+    primaryDark: '#020617',  // Slate-950 - Darker for hover
+    primaryLight: '#1E293B', // Slate-800 - Lighter variant
 
-    // Secondary colors
-    secondary: '#00A699',    // Babu - Teal
-    secondaryDark: '#008B7D',
-    secondaryLight: '#1AB3A6',
+    // Secondary colors - Subtle blue accent
+    secondary: '#3B82F6',    // Blue-500 - Professional accent
+    secondaryDark: '#2563EB', // Blue-600 - Darker variant
+    secondaryLight: '#60A5FA', // Blue-400 - Lighter variant
 
-    // Neutral colors
-    dark: '#484848',         // Charcoal - Main text
-    gray: '#767676',         // Gray - Secondary text
-    lightGray: '#B0B0B0',    // Light gray - Disabled states
+    // Neutral colors - Professional grays
+    dark: '#0F172A',         // Slate-900 - Main headers
+    gray: '#64748B',         // Slate-500 - Body text
+    lightGray: '#94A3B8',    // Slate-400 - Muted text
 
-    // Background colors
-    background: '#FFFFFF',   // White - Main background
-    surface: '#F7F7F7',      // Light Gray - Card backgrounds
-    border: '#EBEBEB',       // Border color
+    // Background colors - Clean whites and grays
+    background: '#FFFFFF',   // Pure white - Main background
+    surface: '#F8FAFC',      // Slate-50 - Card backgrounds
+    border: '#E2E8F0',       // Slate-200 - Subtle borders
 
-    // Status colors
-    success: '#00A699',      // Teal for success
-    warning: '#FFB400',      // Yellow for warnings
-    error: '#FF5A5F',        // Coral for errors
-    info: '#484848',         // Dark gray for info
+    // Status colors - Professional status indicators
+    success: '#16A34A',      // Green-600 - Success states
+    warning: '#D97706',      // Amber-600 - Warning states
+    error: '#DC2626',        // Red-600 - Error states
+    info: '#0284C7',         // Sky-600 - Info states
 
-    // Text colors
-    textPrimary: '#484848',
-    textSecondary: '#767676',
-    textLight: '#FFFFFF',
-    textMuted: '#B0B0B0',
+    // Text colors - High contrast for readability
+    textPrimary: '#0F172A',  // Slate-900 - Primary text
+    textSecondary: '#475569', // Slate-600 - Secondary text
+    textLight: '#FFFFFF',    // White - Light text
+    textMuted: '#94A3B8',    // Slate-400 - Muted text
   },
 
-  // Typography
+  // Typography - Smaller, professional sizing
   typography: {
     fontFamily: {
-      primary: '"Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-      mono: '"SF Mono", Monaco, "Inconsolata", "Fira Code", monospace',
+      primary: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      mono: '"SF Mono", "Consolas", Monaco, "Inconsolata", "Fira Code", monospace',
     },
     fontSize: {
-      xs: '0.75rem',     // 12px
-      sm: '0.875rem',    // 14px
-      base: '1rem',      // 16px
-      lg: '1.125rem',    // 18px
-      xl: '1.25rem',     // 20px
-      '2xl': '1.5rem',   // 24px
-      '3xl': '1.875rem', // 30px
-      '4xl': '2.25rem',  // 36px
-      '5xl': '3rem',     // 48px
+      xs: '0.625rem',    // 10px - Tiny labels
+      sm: '0.75rem',     // 12px - Small text
+      base: '0.8125rem', // 13px - Body text
+      lg: '0.875rem',    // 14px - Slightly larger
+      xl: '1rem',        // 16px - Headers
+      '2xl': '1.125rem', // 18px - Section headers
+      '3xl': '1.375rem', // 22px - Page titles
+      '4xl': '1.75rem',  // 28px - Large headers
+      '5xl': '2.25rem',  // 36px - Hero text
     },
     fontWeight: {
       light: 300,
@@ -63,6 +63,13 @@ export const BRAND_CONFIG = {
       medium: 500,
       semibold: 600,
       bold: 700,
+    },
+    lineHeight: {
+      tight: 1.1,
+      snug: 1.3,
+      normal: 1.5,
+      relaxed: 1.625,
+      loose: 2,
     },
   },
 
@@ -77,15 +84,23 @@ export const BRAND_CONFIG = {
     '3xl': '4rem',   // 64px
   },
 
-  // Border radius
+  // Border radius - Standardized for all components
   borderRadius: {
     none: '0',
-    sm: '0.25rem',   // 4px
-    base: '0.5rem',  // 8px
-    md: '0.75rem',   // 12px
-    lg: '1rem',      // 16px
-    xl: '1.5rem',    // 24px
-    full: '9999px',
+    sm: '0.25rem',   // 4px - Small elements
+    base: '0.375rem',// 6px - Default for inputs and small buttons
+    md: '0.5rem',    // 8px - Standard buttons and cards
+    lg: '0.75rem',   // 12px - Large buttons and modals
+    xl: '1rem',      // 16px - Extra large elements
+    '2xl': '1.5rem', // 24px - Hero sections
+    full: '9999px',  // Pills and circular elements
+
+    // Component-specific (for consistency)
+    button: '0.5rem',     // 8px - All buttons
+    input: '0.375rem',    // 6px - All inputs
+    card: '0.75rem',      // 12px - All cards
+    modal: '1rem',        // 16px - All modals
+    dropdown: '0.5rem',   // 8px - All dropdowns
   },
 
   // Shadows
@@ -102,6 +117,82 @@ export const BRAND_CONFIG = {
     fast: '150ms ease-in-out',
     base: '250ms ease-in-out',
     slow: '350ms ease-in-out',
+  },
+
+  // Component Styles - Standardized UI components
+  components: {
+    button: {
+      // Base button styles
+      base: {
+        padding: '0.5rem 1rem',
+        borderRadius: '0.5rem',
+        fontSize: '0.875rem',
+        fontWeight: 600,
+        transition: '250ms ease-in-out',
+        cursor: 'pointer',
+        border: 'none',
+        outline: 'none',
+      },
+      // Size variants
+      sizes: {
+        xs: { padding: '0.25rem 0.5rem', fontSize: '0.75rem' },
+        sm: { padding: '0.375rem 0.75rem', fontSize: '0.8125rem' },
+        md: { padding: '0.5rem 1rem', fontSize: '0.875rem' },
+        lg: { padding: '0.625rem 1.25rem', fontSize: '1rem' },
+        xl: { padding: '0.75rem 1.5rem', fontSize: '1.125rem' },
+      },
+      // Style variants
+      variants: {
+        primary: {
+          background: '#0F172A',
+          color: '#FFFFFF',
+          hover: { background: '#020617' },
+        },
+        secondary: {
+          background: '#3B82F6',
+          color: '#FFFFFF',
+          hover: { background: '#2563EB' },
+        },
+        outline: {
+          background: 'transparent',
+          border: '1px solid #E2E8F0',
+          color: '#0F172A',
+          hover: { background: '#F8FAFC' },
+        },
+        ghost: {
+          background: 'transparent',
+          color: '#64748B',
+          hover: { background: '#F8FAFC', color: '#0F172A' },
+        },
+      },
+    },
+    input: {
+      base: {
+        padding: '0.5rem 0.75rem',
+        borderRadius: '0.375rem',
+        fontSize: '0.875rem',
+        border: '1px solid #E2E8F0',
+        transition: '250ms ease-in-out',
+        background: '#FFFFFF',
+      },
+      focus: {
+        borderColor: '#3B82F6',
+        outline: 'none',
+        boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)',
+      },
+    },
+    card: {
+      base: {
+        padding: '1rem',
+        borderRadius: '0.75rem',
+        background: '#FFFFFF',
+        border: '1px solid #E2E8F0',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+      },
+      hover: {
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+      },
+    },
   },
 
   // Breakpoints

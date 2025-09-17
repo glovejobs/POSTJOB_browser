@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 
 // Initialize Stripe
 const stripe = new Stripe(config.STRIPE_SECRET_KEY || 'sk_test_dummy', {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2025-08-27.basil',
 });
 
 // POST /api/payment/create-checkout - Create Stripe checkout session

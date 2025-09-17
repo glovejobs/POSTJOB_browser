@@ -2,60 +2,98 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { BRAND_CONFIG } from '@/../../shared/constants';
-import { boards, jobs, auth } from '@/lib/api';
-import { Job, JobBoard } from '@/../../shared/types';
-import MyJobs from '@/components/MyJobs';
-import JobStats from '@/components/JobStats';
-import PostJobForm from '@/components/PostJobForm';
-import { useApi } from '@/hooks/useApi';
-import { PageLoader } from '@/components/ui/Loader';
+import Link from 'next/link';
 import {
-  Briefcase, Plus, BarChart3, Clock, CheckCircle,
-  AlertCircle, LogOut, User, Menu, X, Bell, Search as SearchIcon,
-  TrendingUp, Users, FileText, ChevronRight, Home,
-  Settings, HelpCircle, Calendar, Filter, Download
-} from 'lucide-react';
+  HomeIcon,
+  BriefcaseIcon,
+  ChartBarIcon,
+  CreditCardIcon,
+  Cog6ToothIcon,
+  ArrowRightOnRectangleIcon,
+  PlusIcon,
+  MagnifyingGlassIcon,
+  BellIcon,
+  UserCircleIcon,
+  DocumentTextIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ArrowTrendingUpIcon,
+  BuildingOfficeIcon,
+  MapPinIcon,
+  CalendarIcon,
+  ChevronRightIcon,
+  FunnelIcon,
+  ArrowDownTrayIcon,
+  EllipsisHorizontalIcon,
+} from '@heroicons/react/24/outline';
+import { BellIcon as BellSolidIcon } from '@heroicons/react/24/solid';
+import { BRAND_CONFIG } from '@/../../shared/constants';
 
-export default function DashboardPage() {
+interface JobSummary {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  status: string;
+  createdAt: string;
+  applicationCount: number;
+}
+
+interface Stats {
+  totalJobs: number;
+  activeJobs: number;
+  totalApplications: number;
+  successRate: number;
+}
+
+export default function Dashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'jobs' | 'stats'>('dashboard');
-  const [userEmail, setUserEmail] = useState('');
-  const [userName, setUserName] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState('week');
+  const [stats, setStats] = useState<Stats>({
+    totalJobs: 0,
+    activeJobs: 0,
+    totalApplications: 0,
+    successRate: 0,
+  });
+  const [recentJobs, setRecentJobs] = useState<JobSummary[]>([]);
+  const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState(3);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  const { colors, typography, shadows, borderRadius } = BRAND_CONFIG;
-
-  // Use our optimized hooks for data fetching
-  const { data: userJobs, loading: jobsLoading } = useApi<Job[]>(
-    isAuthenticated ? '/api/jobs' : null,
-    { cache: true, cacheDuration: 60000 } // Cache for 1 minute
-  );
-
-  const { data: boardList, loading: boardsLoading } = useApi<JobBoard[]>(
-    isAuthenticated ? '/api/boards' : null,
-    { cache: true, cacheDuration: 300000 } // Cache for 5 minutes
-  );
-
-  const loading = jobsLoading || boardsLoading;
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    const apiKey = localStorage.getItem('api_key');
-    const email = localStorage.getItem('user_email') || '';
-    const name = localStorage.getItem('user_name') || email.split('@')[0];
+    fetchDashboardData();
+  }, []);
 
-    if (!apiKey) {
-      router.push('/login');
-    } else {
-      setUserEmail(email);
-      setUserName(name);
-      setIsAuthenticated(true);
+  const fetchDashboardData = async () => {
+    try {
+      const apiKey = localStorage.getItem('api_key');
+      if (!apiKey) {
+        router.push('/login');
+        return;
+      }
+
+      const headers = { 'x-api-key': apiKey };
+
+      const [statsRes, jobsRes] = await Promise.all([
+        fetch('/api/analytics/stats', { headers }),
+        fetch('/api/jobs?limit=5', { headers }),
+      ]);
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData);
+      }
+
+      if (jobsRes.ok) {
+        const jobsData = await jobsRes.json();
+        setRecentJobs(jobsData);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [router]);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('api_key');
@@ -64,546 +102,348 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
-  const getStats = () => {
-    // Handle null/undefined userJobs
-    const jobs = userJobs || [];
-    const totalJobs = jobs.length;
-    const completedJobs = jobs.filter(job => job.status === 'completed').length;
-    const pendingJobs = jobs.filter(job => job.status === 'pending' || job.status === 'posting').length;
-    const failedJobs = jobs.filter(job => job.status === 'failed').length;
-    const successRate = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0;
-    const totalPostings = jobs.reduce((acc, job) => acc + (job.postings?.length || 0), 0);
-    const recentJobs = jobs.slice(0, 5);
-
-    return { totalJobs, completedJobs, pendingJobs, failedJobs, successRate, totalPostings, recentJobs };
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active':
+      case 'completed':
+        return 'text-green-600 bg-green-50';
+      case 'pending':
+        return 'text-amber-600 bg-amber-50';
+      case 'failed':
+        return 'text-red-600 bg-red-50';
+      default:
+        return 'text-gray-600 bg-gray-50';
+    }
   };
 
-  // Check loading state before calling getStats
+  const sidebarItems = [
+    { icon: HomeIcon, label: 'Dashboard', href: '/dashboard', active: true },
+    { icon: BriefcaseIcon, label: 'My Jobs', href: '/my-jobs', active: false },
+    { icon: DocumentTextIcon, label: 'Applications', href: '/applications', active: false },
+    { icon: ChartBarIcon, label: 'Analytics', href: '/analytics', active: false },
+    { icon: CreditCardIcon, label: 'Billing', href: '/payment/history', active: false },
+    { icon: Cog6ToothIcon, label: 'Settings', href: '/profile', active: false },
+  ];
+
+  const quickStats = [
+    {
+      label: 'Total Jobs',
+      value: stats.totalJobs,
+      change: '+12%',
+      trend: 'up',
+      icon: BriefcaseIcon,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+    },
+    {
+      label: 'Active Jobs',
+      value: stats.activeJobs,
+      change: stats.totalJobs > 0 ? `${Math.round((stats.activeJobs / stats.totalJobs) * 100)}%` : '0%',
+      trend: 'neutral',
+      icon: CheckCircleIcon,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+    },
+    {
+      label: 'Applications',
+      value: stats.totalApplications,
+      change: '+25%',
+      trend: 'up',
+      icon: DocumentTextIcon,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+    },
+    {
+      label: 'Success Rate',
+      value: `${stats.successRate}%`,
+      change: '+5%',
+      trend: 'up',
+      icon: ChartBarIcon,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
+    },
+  ];
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: colors.background }}>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-solid"
-               style={{ borderColor: `${colors.primary} transparent` }} />
-          <p className="mt-4" style={{ color: colors.gray, fontFamily: typography.fontFamily.primary }}>
-            Loading dashboard...
-          </p>
+          <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs text-gray-500 mt-2">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
-  // Now safe to call getStats after loading check
-  const stats = getStats();
-
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: colors.surface }}>
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out
-        lg:translate-x-0 lg:static lg:inset-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `} style={{ backgroundColor: colors.background }}>
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: colors.border }}>
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center"
-                   style={{
-                     background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)`,
-                     boxShadow: shadows.sm
-                   }}>
-                <Briefcase className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <span className="text-xl font-bold block"
-                      style={{ color: colors.dark, fontFamily: typography.fontFamily.primary }}>
-                  {BRAND_CONFIG.name}
-                </span>
-                <span className="text-xs" style={{ color: colors.gray }}>
-                  {BRAND_CONFIG.tagline}
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-50 transition-colors"
-              style={{ color: colors.gray }}
-            >
-              <X size={20} />
-            </button>
-          </div>
+      <aside className={`${sidebarCollapsed ? 'w-16' : 'w-52'} bg-white border-r border-gray-200 flex flex-col transition-all duration-200`}>
+        {/* Logo */}
+        <div className="h-12 flex items-center justify-between px-4 border-b border-gray-100">
+          {!sidebarCollapsed && (
+            <h1 className="text-sm font-semibold text-gray-900">PostJob</h1>
+          )}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-1 hover:bg-gray-100 rounded text-gray-500"
+          >
+            <ChevronRightIcon className={`h-3.5 w-3.5 transition-transform ${sidebarCollapsed ? '' : 'rotate-180'}`} />
+          </button>
+        </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-            <div className="mb-4">
-              <p className="px-3 text-xs font-semibold uppercase tracking-wider"
-                 style={{ color: colors.lightGray }}>Main</p>
-            </div>
-
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200`}
-              style={{
-                backgroundColor: activeTab === 'dashboard' ? colors.primaryLight + '20' : 'transparent',
-                color: activeTab === 'dashboard' ? colors.primary : colors.textPrimary,
-              }}
-            >
-              <Home size={20} />
-              <span style={{ fontFamily: typography.fontFamily.primary }}>Dashboard</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('jobs')}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200`}
-              style={{
-                backgroundColor: activeTab === 'jobs' ? colors.primaryLight + '20' : 'transparent',
-                color: activeTab === 'jobs' ? colors.primary : colors.textPrimary,
-              }}
-            >
-              <Briefcase size={20} />
-              <span style={{ fontFamily: typography.fontFamily.primary }}>My Jobs</span>
-              {stats.totalJobs > 0 && (
-                <span className="ml-auto px-2 py-0.5 text-xs rounded-full"
-                      style={{ backgroundColor: colors.surface, color: colors.textSecondary }}>
-                  {stats.totalJobs}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('stats')}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200`}
-              style={{
-                backgroundColor: activeTab === 'stats' ? colors.primaryLight + '20' : 'transparent',
-                color: activeTab === 'stats' ? colors.primary : colors.textPrimary,
-              }}
-            >
-              <TrendingUp size={20} />
-              <span style={{ fontFamily: typography.fontFamily.primary }}>Statistics</span>
-            </button>
-
-            <div className="my-4 border-t" style={{ borderColor: colors.border }} />
-
-            <div className="mb-2">
-              <p className="px-3 text-xs font-semibold uppercase tracking-wider"
-                 style={{ color: colors.lightGray }}>Support</p>
-            </div>
-
-            <button
-              className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-gray-50"
-              style={{ color: colors.textPrimary }}
-            >
-              <Settings size={20} />
-              <span style={{ fontFamily: typography.fontFamily.primary }}>Settings</span>
-            </button>
-
-            <button
-              className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-gray-50"
-              style={{ color: colors.textPrimary }}
-            >
-              <HelpCircle size={20} />
-              <span style={{ fontFamily: typography.fontFamily.primary }}>Help</span>
-            </button>
-          </nav>
-
-          {/* User Profile */}
-          <div className="p-4 border-t" style={{ borderColor: colors.border }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center"
-                     style={{ backgroundColor: colors.surface }}>
-                  <User size={20} style={{ color: colors.gray }} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium" 
-                     style={{ color: colors.dark, fontFamily: typography.fontFamily.primary }}>
-                    {userName}
-                  </p>
-                  <p className="text-xs" style={{ color: colors.gray }}>
-                    {userEmail}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => router.push('/profile')}
-                  className="p-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
-                  style={{ color: colors.gray }}
-                  title="Profile Settings"
+        {/* Navigation */}
+        <nav className="flex-1 p-2">
+          <ul className="space-y-0.5">
+            {sidebarItems.map((item) => (
+              <li key={item.label}>
+                <Link
+                  href={item.href}
+                  className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    item.active
+                      ? 'bg-gray-900 text-white'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
                 >
-                  <Settings size={18} />
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 rounded-lg transition-all duration-200 hover:bg-red-50 hover:text-red-600"
-                  style={{ color: colors.gray }}
-                  title="Logout"
-                >
-                  <LogOut size={18} />
-                </button>
-              </div>
-            </div>
-          </div>
+                  <item.icon className="h-3.5 w-3.5 flex-shrink-0" />
+                  {!sidebarCollapsed && <span>{item.label}</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* User section */}
+        <div className="p-2 border-t border-gray-100">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2.5 px-2.5 py-1.5 w-full rounded-md text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
+          >
+            <ArrowRightOnRectangleIcon className="h-3.5 w-3.5 flex-shrink-0" />
+            {!sidebarCollapsed && <span>Sign out</span>}
+          </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="sticky top-0 z-10 bg-white border-b px-6 py-4"
-                style={{ borderColor: colors.border, backgroundColor: colors.background }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                style={{ color: colors.textPrimary }}
-              >
-                <Menu size={20} />
+        <header className="h-12 bg-white border-b border-gray-200">
+          <div className="h-full px-4 flex items-center justify-between">
+            {/* Search */}
+            <div className="flex items-center gap-3 flex-1 max-w-xl">
+              <div className="relative flex-1">
+                <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search jobs, companies, or locations..."
+                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:bg-white transition-colors"
+                />
+              </div>
+              <button className="p-1.5 text-gray-500 hover:text-gray-700">
+                <FunnelIcon className="h-3.5 w-3.5" />
               </button>
-
-              <h1 className="text-2xl font-semibold"
-                  style={{ color: colors.textPrimary, fontFamily: typography.fontFamily.primary }}>
-                {activeTab === 'dashboard' && 'Dashboard'}
-                {activeTab === 'jobs' && 'My Jobs'}
-                {activeTab === 'stats' && 'Statistics'}
-              </h1>
             </div>
 
-            {/* Header Actions */}
-            <div className="flex items-center space-x-3">
-              {/* Search Bar */}
+            {/* Actions */}
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => router.push('/search')}
-                className="hidden md:flex items-center px-4 py-2 rounded-lg transition-colors hover:opacity-80"
-                style={{ backgroundColor: colors.surface, minWidth: '250px' }}
+                onClick={() => router.push('/post-job')}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-md hover:bg-gray-800 transition-colors"
               >
-                <SearchIcon size={18} style={{ color: colors.gray }} />
-                <span className="ml-2 text-sm" style={{ color: colors.textSecondary }}>
-                  Search jobs...
-                </span>
+                <PlusIcon className="h-3.5 w-3.5" />
+                Post Job
               </button>
 
-              {/* Notifications */}
-              <button className="relative p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                <Bell size={20} style={{ color: colors.textPrimary }} />
-                {notifications > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs text-white"
-                        style={{ backgroundColor: colors.error }}>
-                    {notifications}
-                  </span>
+              <button className="relative p-1.5 text-gray-500 hover:text-gray-700">
+                {notifications > 0 ? (
+                  <>
+                    <BellSolidIcon className="h-4 w-4" />
+                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-red-500 rounded-full flex items-center justify-center">
+                      <span className="text-xxs text-white font-medium">{notifications}</span>
+                    </span>
+                  </>
+                ) : (
+                  <BellIcon className="h-4 w-4" />
                 )}
               </button>
 
-              {/* Quick Post Button - Only show on My Jobs tab */}
-              {activeTab === 'jobs' && (
-                <button
-                  onClick={() => router.push('/job/new')}
-                  className="flex items-center px-4 py-2 rounded-lg text-white transition-all transform hover:scale-105"
-                  style={{
-                    background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)`,
-                    boxShadow: shadows.sm
-                  }}
-                >
-                  <Plus size={18} className="mr-2" />
-                  <span className="text-sm font-medium">Post Job</span>
-                </button>
-              )}
+              <button
+                onClick={() => router.push('/profile')}
+                className="p-1.5 text-gray-500 hover:text-gray-700"
+              >
+                <UserCircleIcon className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </header>
 
-        {/* Content Area */}
-        <div className="flex-1 p-6" style={{ backgroundColor: colors.surface }}>
-          {/* Dashboard Overview */}
-          {activeTab === 'dashboard' && (
-            <div className="space-y-6">
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Total Jobs Card */}
-                <div className="p-6 rounded-xl" style={{ backgroundColor: colors.background, boxShadow: shadows.sm }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 rounded-lg"
-                         style={{ backgroundColor: colors.primaryLight + '20' }}>
-                      <Briefcase size={24} style={{ color: colors.primary }} />
-                    </div>
-                    <span className="text-xs font-medium px-2 py-1 rounded"
-                          style={{ backgroundColor: colors.success + '20', color: colors.success }}>
-                      +12%
-                    </span>
-                  </div>
-                  <h3 className="text-3xl font-bold mb-1" style={{ color: colors.textPrimary }}>
-                    {stats.totalJobs}
-                  </h3>
-                  <p className="text-sm" style={{ color: colors.textSecondary }}>
-                    Total Jobs Posted
-                  </p>
-                </div>
-
-                {/* Active Jobs Card */}
-                <div className="p-6 rounded-xl" style={{ backgroundColor: colors.background, boxShadow: shadows.sm }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 rounded-lg"
-                         style={{ backgroundColor: colors.secondaryLight + '20' }}>
-                      <Clock size={24} style={{ color: colors.secondary }} />
-                    </div>
-                    <span className="text-xs font-medium px-2 py-1 rounded"
-                          style={{ backgroundColor: colors.warning + '20', color: colors.warning }}>
-                      Active
-                    </span>
-                  </div>
-                  <h3 className="text-3xl font-bold mb-1" style={{ color: colors.textPrimary }}>
-                    {stats.pendingJobs}
-                  </h3>
-                  <p className="text-sm" style={{ color: colors.textSecondary }}>
-                    Currently Posting
-                  </p>
-                </div>
-
-                {/* Success Rate Card */}
-                <div className="p-6 rounded-xl" style={{ backgroundColor: colors.background, boxShadow: shadows.sm }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 rounded-lg"
-                         style={{ backgroundColor: colors.success + '20' }}>
-                      <TrendingUp size={24} style={{ color: colors.success }} />
-                    </div>
-                    <span className="text-xs font-medium px-2 py-1 rounded"
-                          style={{ backgroundColor: colors.success + '20', color: colors.success }}>
-                      Good
-                    </span>
-                  </div>
-                  <h3 className="text-3xl font-bold mb-1" style={{ color: colors.textPrimary }}>
-                    {stats.successRate}%
-                  </h3>
-                  <p className="text-sm" style={{ color: colors.textSecondary }}>
-                    Success Rate
-                  </p>
-                </div>
-
-                {/* Total Postings Card */}
-                <div className="p-6 rounded-xl" style={{ backgroundColor: colors.background, boxShadow: shadows.sm }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 rounded-lg"
-                         style={{ backgroundColor: colors.info + '20' }}>
-                      <Users size={24} style={{ color: colors.info }} />
-                    </div>
-                    <span className="text-xs font-medium px-2 py-1 rounded"
-                          style={{ backgroundColor: colors.secondary + '20', color: colors.secondary }}>
-                      +8%
-                    </span>
-                  </div>
-                  <h3 className="text-3xl font-bold mb-1" style={{ color: colors.textPrimary }}>
-                    {stats.totalPostings}
-                  </h3>
-                  <p className="text-sm" style={{ color: colors.textSecondary }}>
-                    Board Postings
-                  </p>
-                </div>
+        {/* Page content */}
+        <main className="flex-1 p-4">
+          {/* Page header */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">Dashboard Overview</h1>
+                <p className="text-xs text-gray-500 mt-0.5">Track your job postings and application metrics</p>
               </div>
+              <div className="flex items-center gap-2">
+                <select className="text-xs px-2.5 py-1 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300">
+                  <option>Last 7 days</option>
+                  <option>Last 30 days</option>
+                  <option>Last 90 days</option>
+                </select>
+                <button className="p-1.5 text-gray-500 hover:text-gray-700">
+                  <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
 
-              {/* Charts and Recent Activity */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Activity Chart */}
-                <div className="lg:col-span-2 p-6 rounded-xl"
-                     style={{ backgroundColor: colors.background, boxShadow: shadows.sm }}>
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-semibold" style={{ color: colors.textPrimary }}>
-                      Posting Activity
-                    </h3>
-                    <select
-                      value={selectedPeriod}
-                      onChange={(e) => setSelectedPeriod(e.target.value)}
-                      className="px-3 py-1 rounded-lg border text-sm outline-none"
-                      style={{
-                        borderColor: colors.border,
-                        color: colors.textPrimary,
-                        backgroundColor: colors.background
-                      }}
-                    >
-                      <option value="week">Last Week</option>
-                      <option value="month">Last Month</option>
-                      <option value="year">Last Year</option>
-                    </select>
-                  </div>
-
-                  {/* Chart Placeholder */}
-                  <div className="h-64 flex items-center justify-center rounded-lg"
-                       style={{ backgroundColor: colors.surface }}>
-                    <div className="text-center">
-                      <BarChart3 size={48} style={{ color: colors.lightGray }} className="mx-auto mb-3" />
-                      <p style={{ color: colors.textSecondary }}>
-                        Activity chart will appear here
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recent Jobs */}
-                <div className="p-6 rounded-xl"
-                     style={{ backgroundColor: colors.background, boxShadow: shadows.sm }}>
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-semibold" style={{ color: colors.textPrimary }}>
-                      Recent Jobs
-                    </h3>
-                    <button
-                      onClick={() => setActiveTab('jobs')}
-                      className="text-sm font-medium flex items-center hover:underline"
-                      style={{ color: colors.primary }}
-                    >
-                      View All
-                      <ChevronRight size={16} className="ml-1" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    {stats.recentJobs.map((job, idx) => (
-                      <div
-                        key={job.id}
-                        className="p-4 rounded-lg cursor-pointer hover:shadow-md transition-all"
-                        style={{
-                          backgroundColor: colors.surface,
-                          borderLeft: `3px solid ${
-                            job.status === 'completed' ? colors.success :
-                            job.status === 'posting' ? colors.warning :
-                            job.status === 'failed' ? colors.error : colors.gray
-                          }`
-                        }}
-                        onClick={() => router.push(`/job/${job.id}`)}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-medium" style={{ color: colors.textPrimary }}>
-                            {job.title}
-                          </h4>
-                          <div className="flex items-center">
-                            {job.status === 'completed' && <CheckCircle size={16} style={{ color: colors.success }} />}
-                            {job.status === 'posting' && <Clock size={16} style={{ color: colors.warning }} />}
-                            {job.status === 'failed' && <AlertCircle size={16} style={{ color: colors.error }} />}
-                          </div>
-                        </div>
-                        <p className="text-sm mb-2" style={{ color: colors.textSecondary }}>
-                          {job.company} • {job.location}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs" style={{ color: colors.textMuted }}>
-                            {new Date(job.createdAt).toLocaleDateString()}
-                          </span>
-                          <span className="text-xs" style={{ color: colors.textSecondary }}>
-                            {job.postings?.filter((p: any) => p.status === 'success').length || 0}/{job.postings?.length || 0} boards
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-
-                    {stats.recentJobs.length === 0 && (
-                      <div className="text-center py-8">
-                        <FileText size={48} style={{ color: colors.lightGray }} className="mx-auto mb-3" />
-                        <p style={{ color: colors.textSecondary }}>
-                          No jobs posted yet
-                        </p>
-                        <button
-                          onClick={() => router.push('/job/new')}
-                          className="mt-4 px-4 py-2 rounded-lg text-white"
-                          style={{
-                            backgroundColor: colors.primary,
-                            boxShadow: shadows.sm
-                          }}
-                        >
-                          Post Your First Job
-                        </button>
+          {/* Stats grid */}
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            {quickStats.map((stat) => (
+              <div key={stat.label} className="bg-white rounded-lg border border-gray-200 p-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
+                    <p className="text-xl font-semibold text-gray-900">{stat.value}</p>
+                    {stat.change && (
+                      <div className="flex items-center gap-1 mt-1">
+                        {stat.trend === 'up' && (
+                          <ArrowTrendingUpIcon className="h-3 w-3 text-green-500" />
+                        )}
+                        <span className={`text-xxs ${stat.trend === 'up' ? 'text-green-600' : 'text-gray-500'}`}>
+                          {stat.change} from last period
+                        </span>
                       </div>
                     )}
                   </div>
+                  <div className={`p-1.5 rounded-md ${stat.bgColor}`}>
+                    <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
 
-              {/* Quick Actions */}
-              <div className="p-6 rounded-xl" style={{ backgroundColor: colors.background, boxShadow: shadows.sm }}>
-                <h3 className="text-lg font-semibold mb-4" style={{ color: colors.textPrimary }}>
-                  Quick Actions
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <button
-                    onClick={() => router.push('/job/new')}
-                    className="flex items-center p-4 rounded-lg border-2 border-dashed transition-all hover:shadow-md"
-                    style={{
-                      borderColor: colors.primary,
-                      backgroundColor: colors.primaryLight + '10'
-                    }}
-                  >
-                    <Plus size={32} style={{ color: colors.primary }} className="mr-3" />
-                    <div className="text-left">
-                      <h4 className="font-medium" style={{ color: colors.textPrimary }}>
-                        Post New Job
-                      </h4>
-                      <p className="text-sm" style={{ color: colors.textSecondary }}>
-                        Start posting to multiple boards
-                      </p>
-                    </div>
-                  </button>
-
-                  <button
-                    className="flex items-center p-4 rounded-lg border-2 border-dashed transition-all hover:shadow-md"
-                    style={{
-                      borderColor: colors.secondary,
-                      backgroundColor: colors.secondaryLight + '10'
-                    }}
-                  >
-                    <FileText size={32} style={{ color: colors.secondary }} className="mr-3" />
-                    <div className="text-left">
-                      <h4 className="font-medium" style={{ color: colors.textPrimary }}>
-                        Use Template
-                      </h4>
-                      <p className="text-sm" style={{ color: colors.textSecondary }}>
-                        Quick start with templates
-                      </p>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => router.push('/analytics')}
-                    className="flex items-center p-4 rounded-lg border-2 border-dashed transition-all hover:shadow-md"
-                    style={{
-                      borderColor: colors.info,
-                      backgroundColor: colors.info + '10'
-                    }}
-                  >
-                    <BarChart3 size={32} style={{ color: colors.info }} className="mr-3" />
-                    <div className="text-left">
-                      <h4 className="font-medium" style={{ color: colors.textPrimary }}>
-                        View Analytics
-                      </h4>
-                      <p className="text-sm" style={{ color: colors.textSecondary }}>
-                        Track your performance
-                      </p>
-                    </div>
-                  </button>
-                </div>
+          {/* Content grid */}
+          <div className="grid grid-cols-3 gap-4">
+            {/* Recent Jobs - 2 columns */}
+            <div className="col-span-2 bg-white rounded-lg border border-gray-200">
+              <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="text-sm font-medium text-gray-900">Recent Jobs</h2>
+                <Link
+                  href="/my-jobs"
+                  className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                >
+                  View all
+                  <ChevronRightIcon className="h-3 w-3" />
+                </Link>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {recentJobs.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <BriefcaseIcon className="h-6 w-6 text-gray-300 mx-auto mb-2" />
+                    <p className="text-xs text-gray-500 mb-3">No jobs posted yet</p>
+                    <button
+                      onClick={() => router.push('/post-job')}
+                      className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Post your first job
+                    </button>
+                  </div>
+                ) : (
+                  <div className="max-h-80 overflow-y-auto">
+                    {recentJobs.map((job) => (
+                      <div
+                        key={job.id}
+                        className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => router.push(`/job/${job.id}`)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-xs font-medium text-gray-900">{job.title}</h3>
+                              <span className={`px-1.5 py-0.5 text-xxs font-medium rounded ${getStatusColor(job.status)}`}>
+                                {job.status}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="flex items-center gap-1 text-xxs text-gray-500">
+                                <BuildingOfficeIcon className="h-3 w-3" />
+                                {job.company}
+                              </span>
+                              <span className="flex items-center gap-1 text-xxs text-gray-500">
+                                <MapPinIcon className="h-3 w-3" />
+                                {job.location}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {job.applicationCount > 0 && (
+                              <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-xxs font-medium rounded">
+                                {job.applicationCount} apps
+                              </span>
+                            )}
+                            <button className="p-0.5 text-gray-400 hover:text-gray-600">
+                              <EllipsisHorizontalIcon className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          )}
 
-          {activeTab === 'jobs' && (
-            <MyJobs
-              initialJobs={userJobs || []}
-              onJobClick={(job) => router.push(`/job/${job.id}`)}
-              onPostNewJob={() => router.push('/job/new')}
-            />
-          )}
-
-          {activeTab === 'stats' && (
-            <JobStats jobs={userJobs || []} />
-          )}
-        </div>
-      </main>
-
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+            {/* Quick Actions */}
+            <div className="bg-white rounded-lg border border-gray-200">
+              <div className="px-4 py-2.5 border-b border-gray-100">
+                <h2 className="text-sm font-medium text-gray-900">Quick Actions</h2>
+              </div>
+              <div className="p-3 space-y-2">
+                <button
+                  onClick={() => router.push('/post-job')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors text-left"
+                >
+                  <PlusIcon className="h-3.5 w-3.5" />
+                  Post a new job
+                </button>
+                <button
+                  onClick={() => router.push('/jobs')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors text-left"
+                >
+                  <MagnifyingGlassIcon className="h-3.5 w-3.5" />
+                  Browse job board
+                </button>
+                <button
+                  onClick={() => router.push('/applications/track')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors text-left"
+                >
+                  <DocumentTextIcon className="h-3.5 w-3.5" />
+                  Track applications
+                </button>
+                <button
+                  onClick={() => router.push('/analytics')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors text-left"
+                >
+                  <ChartBarIcon className="h-3.5 w-3.5" />
+                  View analytics
+                </button>
+                <button
+                  onClick={() => router.push('/payment/history')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors text-left"
+                >
+                  <CreditCardIcon className="h-3.5 w-3.5" />
+                  Payment history
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

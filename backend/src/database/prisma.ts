@@ -1,8 +1,45 @@
 // Mock Prisma Client for testing when real client can't be generated
 const mockPrismaClient = {
   user: {
-    findUnique: async (_query?: any) => ({ id: '1', email: 'test@example.com', apiKey: 'test-key', createdAt: new Date() }),
-    create: async (data: any) => ({ id: '1', ...data.data, createdAt: new Date() })
+    findUnique: async (_query?: any) => ({
+      id: '1',
+      email: 'test@example.com',
+      apiKey: 'test-key',
+      name: 'Test User',
+      password: '$2a$10$YourHashedPasswordHere',
+      company: 'Test Company',
+      phone: '+1234567890',
+      website: 'https://example.com',
+      bio: 'Test bio',
+      avatar: null,
+      emailPreferences: {
+        jobUpdates: true,
+        weeklyDigest: true,
+        marketing: false,
+        applications: true
+      },
+      createdAt: new Date(),
+      _count: {
+        jobs: 5
+      }
+    }),
+    create: async (data: any) => ({ id: '1', ...data.data, createdAt: new Date() }),
+    update: async (_query?: any) => ({
+      id: '1',
+      email: 'test@example.com',
+      name: 'Updated User',
+      company: 'Updated Company',
+      phone: '+1234567890',
+      website: 'https://example.com',
+      bio: 'Updated bio',
+      emailPreferences: {
+        jobUpdates: true,
+        weeklyDigest: true,
+        marketing: false,
+        applications: true
+      }
+    }),
+    delete: async (_query?: any) => ({ id: '1', email: 'test@example.com', apiKey: 'test-key', createdAt: new Date() })
   },
   postjob_users: {
     findUnique: async (_query?: any) => ({ id: '1', email: 'test@example.com', api_key: 'test-key', created_at: new Date(), updated_at: new Date() }),
@@ -42,8 +79,20 @@ const mockPrismaClient = {
       postings: [],
       paymentIntentId: null
     }),
-    findMany: async (_query?: any) => [{ id: '1', title: 'Test Job', status: 'pending', _count: { postings: 5 } }],
-    update: async (_query?: any) => ({ id: '1', title: 'Test Job', status: 'posting', paymentIntentId: 'pi_test_123' })
+    findMany: async (_query?: any) => [{
+      id: '1',
+      title: 'Test Job',
+      company: 'Test Company',
+      status: 'pending',
+      createdAt: new Date(),
+      _count: { postings: 5 }
+    }],
+    update: async (_query?: any) => ({ id: '1', title: 'Test Job', status: 'posting', paymentIntentId: 'pi_test_123' }),
+    groupBy: async (_query?: any) => [
+      { status: 'draft', _count: 2 },
+      { status: 'completed', _count: 3 },
+      { status: 'pending', _count: 1 }
+    ]
   },
   postjob_jobs: {
     create: async (data: any) => ({ id: '1', ...data.data, created_at: new Date(), updated_at: new Date() }),

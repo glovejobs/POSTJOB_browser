@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../../middleware/auth.middleware';
-import { startOfWeek, startOfMonth, subDays, subMonths } from 'date-fns';
+import { startOfWeek, subDays, subMonths } from 'date-fns';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -404,7 +404,7 @@ router.get('/applicants', authenticate, async (req: AuthRequest, res) => {
 router.get('/export', authenticate, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
-    const { format = 'json', type = 'overview' } = req.query;
+    const { format = 'json' } = req.query;
 
     // Fetch all data
     const [jobs, applications] = await Promise.all([
