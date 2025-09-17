@@ -72,7 +72,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             className={`
-              w-full px-3 py-2 border rounded-lg
+              w-full px-3 py-2 border
               transition-all duration-200 ease-in-out
               focus:outline-none focus:ring-2 focus:ring-offset-1
               disabled:bg-gray-100 disabled:cursor-not-allowed
@@ -91,6 +91,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 : isFocused
                 ? colors.primary
                 : colors.border,
+              borderRadius: BRAND_CONFIG.borderRadius.input,
               fontFamily: typography.fontFamily.primary,
               transform: isFocused ? 'scale(1.01)' : 'scale(1)',
               boxShadow: isFocused ? '0 0 0 3px rgba(255, 90, 95, 0.1)' : 'none'

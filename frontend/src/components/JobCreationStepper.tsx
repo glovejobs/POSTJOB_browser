@@ -215,7 +215,7 @@ export default function JobCreationStepper({ onSuccess, onCancel }: StepperFormP
                 value={formData.title}
                 onChange={(e) => updateFormData('title', e.target.value)}
                 placeholder="e.g., Senior Software Engineer"
-                className={`w-full px-4 py-3 rounded-lg border transition-all ${
+                className={`w-full px-4 py-3 border transition-all ${
                   errors.title ? 'border-red-500' : 'border-gray-300'
                 } focus:outline-none focus:ring-2`}
                 style={{
@@ -223,6 +223,7 @@ export default function JobCreationStepper({ onSuccess, onCancel }: StepperFormP
                   backgroundColor: colors.background,
                   fontFamily: typography.fontFamily.primary,
                   fontSize: typography.fontSize.base,
+                  borderRadius: borderRadius.input,
                   ...(errors.title ? {} : { borderColor: colors.border })
                 }}
                 onFocus={(e) => e.target.style.borderColor = colors.primary}
@@ -254,7 +255,8 @@ export default function JobCreationStepper({ onSuccess, onCancel }: StepperFormP
                     borderColor: errors.company ? colors.error : colors.border,
                     backgroundColor: colors.background,
                     fontFamily: typography.fontFamily.primary,
-                    fontSize: typography.fontSize.base
+                    fontSize: typography.fontSize.base,
+                    borderRadius: borderRadius.input
                   }}
                   onFocus={(e) => e.target.style.borderColor = colors.primary}
                   onBlur={(e) => e.target.style.borderColor = errors.company ? colors.error : colors.border}

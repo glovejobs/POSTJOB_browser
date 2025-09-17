@@ -44,16 +44,17 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         </div>
       )}
       <div
-        className={`w-full bg-gray-200 rounded-full overflow-hidden ${heightClasses[height]}`}
-        style={{ backgroundColor: BRAND_CONFIG.colors.surface }}
+        className={`w-full bg-gray-200 overflow-hidden ${heightClasses[height]}`}
+        style={{ backgroundColor: BRAND_CONFIG.colors.surface, borderRadius: BRAND_CONFIG.borderRadius.full }}
       >
         <div
-          className={`h-full rounded-full transition-all duration-500 ease-out ${
+          className={`h-full transition-all duration-500 ease-out ${
             animated ? 'animate-progress-fill' : ''
           }`}
           style={{
             width: `${Math.min(100, Math.max(0, progress))}%`,
-            backgroundColor: color
+            backgroundColor: color,
+            borderRadius: BRAND_CONFIG.borderRadius.full
           }}
         />
       </div>
@@ -90,7 +91,7 @@ export const Stepper: React.FC<StepperProps> = ({
             <div className="relative">
               <div
                 className={`
-                  w-10 h-10 rounded-full flex items-center justify-center font-semibold
+                  w-10 h-10 flex items-center justify-center font-semibold
                   transition-all duration-300
                   ${
                     step.status === 'completed'
@@ -107,7 +108,8 @@ export const Stepper: React.FC<StepperProps> = ({
                       : step.status === 'active'
                       ? BRAND_CONFIG.colors.primary
                       : BRAND_CONFIG.colors.surface,
-                  borderColor: step.status === 'pending' ? BRAND_CONFIG.colors.border : undefined
+                  borderColor: step.status === 'pending' ? BRAND_CONFIG.colors.border : undefined,
+                  borderRadius: BRAND_CONFIG.borderRadius.full
                 }}
               >
                 {step.status === 'completed' ? (
@@ -117,8 +119,8 @@ export const Stepper: React.FC<StepperProps> = ({
                 )}
               </div>
               {step.status === 'active' && (
-                <div className="absolute inset-0 rounded-full animate-ping opacity-20"
-                  style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
+                <div className="absolute inset-0 animate-ping opacity-20"
+                  style={{ backgroundColor: BRAND_CONFIG.colors.primary, borderRadius: BRAND_CONFIG.borderRadius.full }}
                 />
               )}
             </div>
@@ -287,17 +289,18 @@ export const JobPostingProgress: React.FC<JobPostingProgressProps> = ({
         {platforms.map((platform, index) => (
           <div
             key={index}
-            className="flex items-center justify-between p-4 rounded-lg border"
+            className="flex items-center justify-between p-4 border"
             style={{
               borderColor: BRAND_CONFIG.colors.border,
               backgroundColor:
-                platform.status === 'posting' ? `${BRAND_CONFIG.colors.warning}10` : 'white'
+                platform.status === 'posting' ? `${BRAND_CONFIG.colors.warning}10` : 'white',
+              borderRadius: BRAND_CONFIG.borderRadius.card
             }}
           >
             <div className="flex items-center space-x-3">
               <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
-                style={{ backgroundColor: getStatusColor(platform.status) }}
+                className="w-8 h-8 flex items-center justify-center text-white font-bold"
+                style={{ backgroundColor: getStatusColor(platform.status), borderRadius: BRAND_CONFIG.borderRadius.full }}
               >
                 <span className={platform.status === 'posting' ? 'animate-spin' : ''}>
                   {getStatusIcon(platform.status)}
@@ -316,10 +319,10 @@ export const JobPostingProgress: React.FC<JobPostingProgressProps> = ({
             </div>
             {platform.status === 'posting' && (
               <div className="animate-pulse">
-                <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="w-20 h-2 bg-gray-200 overflow-hidden" style={{ borderRadius: BRAND_CONFIG.borderRadius.full }}>
                   <div
-                    className="h-full rounded-full animate-progress-indeterminate"
-                    style={{ backgroundColor: BRAND_CONFIG.colors.warning }}
+                    className="h-full animate-progress-indeterminate"
+                    style={{ backgroundColor: BRAND_CONFIG.colors.warning, borderRadius: BRAND_CONFIG.borderRadius.full }}
                   />
                 </div>
               </div>

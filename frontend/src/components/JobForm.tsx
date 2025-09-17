@@ -63,12 +63,13 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
           id="title"
           {...register('title', { required: 'Job title is required' })}
           className={cn(
-            "w-full px-3 py-2 border rounded-md shadow-sm transition-all",
+            "w-full px-3 py-2 border shadow-sm transition-all",
             "focus:outline-none focus:ring-2 focus:ring-offset-2",
             errors.title && "border-red-500"
           )}
           style={{
             borderColor: errors.title ? BRAND_CONFIG.colors.error : BRAND_CONFIG.colors.border,
+            borderRadius: BRAND_CONFIG.borderRadius.input,
             '--tw-ring-color': BRAND_CONFIG.colors.primary
           } as React.CSSProperties}
           placeholder="e.g. Senior Software Engineer"
@@ -89,10 +90,11 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
           id="company"
           {...register('company', { required: 'Company name is required' })}
           className={cn(
-            "w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm",
+            "w-full px-3 py-2 border border-gray-300 shadow-sm",
             "focus:outline-none focus:ring-indigo-500 focus:border-indigo-500",
             errors.company && "border-red-500"
           )}
+          style={{ borderRadius: BRAND_CONFIG.borderRadius.input }}
           placeholder="e.g. Acme Corp"
         />
         {errors.company && (
@@ -111,10 +113,11 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
           id="location"
           {...register('location', { required: 'Location is required' })}
           className={cn(
-            "w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm",
+            "w-full px-3 py-2 border border-gray-300 shadow-sm",
             "focus:outline-none focus:ring-indigo-500 focus:border-indigo-500",
             errors.location && "border-red-500"
           )}
+          style={{ borderRadius: BRAND_CONFIG.borderRadius.input }}
           placeholder="e.g. San Francisco, CA / Remote"
         />
         {errors.location && (
@@ -132,7 +135,8 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
             type="number"
             id="salary_min"
             {...register('salary_min', { min: 0 })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            style={{ borderRadius: BRAND_CONFIG.borderRadius.input }}
             placeholder="e.g. 120000"
           />
         </div>
@@ -144,7 +148,8 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
             type="number"
             id="salary_max"
             {...register('salary_max', { min: 0 })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            style={{ borderRadius: BRAND_CONFIG.borderRadius.input }}
             placeholder="e.g. 180000"
           />
         </div>
@@ -166,10 +171,11 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
             }
           })}
           className={cn(
-            "w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm",
+            "w-full px-3 py-2 border border-gray-300 shadow-sm",
             "focus:outline-none focus:ring-indigo-500 focus:border-indigo-500",
             errors.contact_email && "border-red-500"
           )}
+          style={{ borderRadius: BRAND_CONFIG.borderRadius.input }}
           placeholder="jobs@company.com"
         />
         {errors.contact_email && (
@@ -187,10 +193,11 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
           rows={6}
           {...register('description', { required: 'Job description is required' })}
           className={cn(
-            "w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm",
+            "w-full px-3 py-2 border border-gray-300 shadow-sm",
             "focus:outline-none focus:ring-indigo-500 focus:border-indigo-500",
             errors.description && "border-red-500"
           )}
+          style={{ borderRadius: BRAND_CONFIG.borderRadius.input }}
           placeholder="Describe the role, responsibilities, requirements..."
         />
         {errors.description && (
@@ -208,13 +215,15 @@ export default function JobForm({ boards, onSubmit }: JobFormProps) {
           {boards.map((board) => (
             <label
               key={board.id}
-              className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
+              className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-3 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
+              style={{ borderRadius: BRAND_CONFIG.borderRadius.card }}
             >
               <input
                 type="checkbox"
                 checked={selectedBoards.includes(board.id)}
                 onChange={() => toggleBoard(board.id)}
-                className="h-4 w-4 border-gray-300 rounded transition-all duration-200"
+                className="h-4 w-4 border-gray-300 transition-all duration-200"
+                style={{ borderRadius: BRAND_CONFIG.borderRadius.sm }}
                 style={{ '--tw-text-opacity': 1, color: BRAND_CONFIG.colors.primary } as React.CSSProperties}
               />
               <span className="text-sm text-gray-700">{board.name}</span>

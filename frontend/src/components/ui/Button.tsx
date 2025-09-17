@@ -28,7 +28,7 @@ export function Button({
 
   const baseStyles = `
     relative inline-flex items-center justify-center
-    font-medium rounded-lg transition-all duration-200
+    font-medium transition-all duration-200
     transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed
     ${fullWidth ? 'w-full' : ''}
   `;
@@ -103,6 +103,7 @@ export function Button({
       style={{
         ...style,
         fontFamily: typography.fontFamily.primary,
+        borderRadius: BRAND_CONFIG.borderRadius.button,
         position: 'relative' as const,
         ...(loading && { cursor: 'wait' })
       }}

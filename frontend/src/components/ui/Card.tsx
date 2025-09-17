@@ -25,7 +25,7 @@ export function Card({
   const { colors, shadows } = BRAND_CONFIG;
 
   const baseStyles = `
-    rounded-lg transition-all duration-300
+    transition-all duration-300
     ${animate ? 'transform' : ''}
     ${onClick ? 'cursor-pointer' : ''}
   `;
@@ -56,6 +56,7 @@ export function Card({
       className={`${baseStyles} ${style.hover} ${className} ${loading ? 'animate-pulse' : ''}`}
       style={{
         ...style,
+        borderRadius: BRAND_CONFIG.borderRadius.card,
         position: 'relative' as const
       }}
       onClick={onClick}

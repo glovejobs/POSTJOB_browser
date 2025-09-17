@@ -19,10 +19,10 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   animation = 'pulse'
 }) => {
   const variantClasses = {
-    text: 'h-4 w-full rounded',
-    circular: 'rounded-full',
-    rectangular: 'rounded-none',
-    rounded: 'rounded-lg'
+    text: 'h-4 w-full',
+    circular: '',
+    rectangular: '',
+    rounded: ''
   };
 
   const animationClasses = {
@@ -31,10 +31,25 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     none: ''
   };
 
+  const getBorderRadius = () => {
+    switch (variant) {
+      case 'circular':
+        return BRAND_CONFIG.borderRadius.full;
+      case 'rectangular':
+        return '0';
+      case 'rounded':
+        return BRAND_CONFIG.borderRadius.card;
+      case 'text':
+      default:
+        return BRAND_CONFIG.borderRadius.sm;
+    }
+  };
+
   const style: React.CSSProperties = {
     width: width || (variant === 'circular' ? '40px' : '100%'),
     height: height || (variant === 'circular' ? '40px' : variant === 'text' ? '16px' : '120px'),
     backgroundColor: BRAND_CONFIG.colors.surface,
+    borderRadius: getBorderRadius(),
     background: animation === 'wave'
       ? `linear-gradient(90deg, ${BRAND_CONFIG.colors.surface} 0%, ${BRAND_CONFIG.colors.border} 50%, ${BRAND_CONFIG.colors.surface} 100%)`
       : undefined
@@ -50,7 +65,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 
 export const SkeletonCard: React.FC<{ showAvatar?: boolean }> = ({ showAvatar = false }) => {
   return (
-    <div className="p-6 bg-white rounded-lg border" style={{ borderColor: BRAND_CONFIG.colors.border }}>
+    <div className="p-6 bg-white border" style={{ borderColor: BRAND_CONFIG.colors.border, borderRadius: BRAND_CONFIG.borderRadius.card }}>
       {showAvatar && (
         <div className="flex items-center mb-4">
           <Skeleton variant="circular" width={48} height={48} />
@@ -78,7 +93,7 @@ export const SkeletonTable: React.FC<{ rows?: number; columns?: number }> = ({
 }) => {
   return (
     <div className="w-full">
-      <div className="border rounded-lg" style={{ borderColor: BRAND_CONFIG.colors.border }}>
+      <div className="border" style={{ borderColor: BRAND_CONFIG.colors.border, borderRadius: BRAND_CONFIG.borderRadius.card }}>
         <div className="p-4 border-b" style={{ borderColor: BRAND_CONFIG.colors.border }}>
           <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
             {Array.from({ length: columns }).map((_, i) => (

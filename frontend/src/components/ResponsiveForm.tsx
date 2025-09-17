@@ -228,7 +228,8 @@ export default function ResponsiveForm({
               {field.options?.map(option => (
                 <label
                   key={option.value}
-                  className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-gray-50"
+                  className="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-50"
+                  style={{ borderRadius: BRAND_CONFIG.borderRadius.sm }}
                 >
                   <input
                     type="radio"
@@ -312,11 +313,12 @@ export default function ResponsiveForm({
             {steps.map((_, index) => (
               <div
                 key={index}
-                className={`h-2 rounded-full transition-all ${
+                className={`h-2 transition-all ${
                   index === currentStep ? 'w-8' : 'w-2'
                 }`}
                 style={{
-                  backgroundColor: index <= currentStep ? colors.primary : colors.lightGray
+                  backgroundColor: index <= currentStep ? colors.primary : colors.lightGray,
+                  borderRadius: BRAND_CONFIG.borderRadius.full
                 }}
               />
             ))}
@@ -343,11 +345,12 @@ export default function ResponsiveForm({
                 style={{ flex: 1 }}
               >
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium transition-all ${
+                  className={`w-10 h-10 flex items-center justify-center text-white font-medium transition-all ${
                     index <= currentStep ? 'scale-110' : ''
                   }`}
                   style={{
-                    backgroundColor: index <= currentStep ? colors.primary : colors.lightGray
+                    backgroundColor: index <= currentStep ? colors.primary : colors.lightGray,
+                    borderRadius: BRAND_CONFIG.borderRadius.full
                   }}
                 >
                   {index < currentStep ? <Check size={20} /> : index + 1}

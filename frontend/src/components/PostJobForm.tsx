@@ -20,10 +20,11 @@ export default function PostJobForm({ onSuccess }: PostJobFormProps) {
     <div className="space-y-6">
       {/* Hero Section */}
       <div className="text-center py-8">
-        <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+        <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6"
              style={{
                background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)`,
-               boxShadow: shadows.lg
+               boxShadow: shadows.lg,
+               borderRadius: borderRadius.full
              }}>
           <Sparkles size={40} className="text-white" />
         </div>
@@ -40,11 +41,12 @@ export default function PostJobForm({ onSuccess }: PostJobFormProps) {
 
         <button
           onClick={handleStartPosting}
-          className="inline-flex items-center px-8 py-4 rounded-xl text-white font-medium transition-all transform hover:scale-105"
+          className="inline-flex items-center px-8 py-4 text-white font-medium transition-all transform hover:scale-105"
           style={{
             background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)`,
             boxShadow: shadows.md,
-            fontSize: typography.fontSize.lg
+            fontSize: typography.fontSize.lg,
+            borderRadius: borderRadius.card
           }}
         >
           <Plus size={20} className="mr-2" />
@@ -55,8 +57,8 @@ export default function PostJobForm({ onSuccess }: PostJobFormProps) {
 
       {/* Features Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-6 rounded-xl text-center"
-             style={{ backgroundColor: colors.primaryLight + '10', border: `1px solid ${colors.primaryLight + '30'}` }}>
+        <div className="p-6 text-center"
+             style={{ backgroundColor: colors.primaryLight + '10', border: `1px solid ${colors.primaryLight + '30'}`, borderRadius: borderRadius.card }}>
           <Target size={32} style={{ color: colors.primary }} className="mx-auto mb-3" />
           <h4 className="font-medium mb-2" style={{ color: colors.textPrimary }}>
             Multi-Board Posting
@@ -66,8 +68,8 @@ export default function PostJobForm({ onSuccess }: PostJobFormProps) {
           </p>
         </div>
 
-        <div className="p-6 rounded-xl text-center"
-             style={{ backgroundColor: colors.secondaryLight + '10', border: `1px solid ${colors.secondaryLight + '30'}` }}>
+        <div className="p-6 text-center"
+             style={{ backgroundColor: colors.secondaryLight + '10', border: `1px solid ${colors.secondaryLight + '30'}`, borderRadius: borderRadius.card }}>
           <Zap size={32} style={{ color: colors.secondary }} className="mx-auto mb-3" />
           <h4 className="font-medium mb-2" style={{ color: colors.textPrimary }}>
             Instant Publishing
@@ -77,8 +79,8 @@ export default function PostJobForm({ onSuccess }: PostJobFormProps) {
           </p>
         </div>
 
-        <div className="p-6 rounded-xl text-center"
-             style={{ backgroundColor: colors.success + '10', border: `1px solid ${colors.success + '30'}` }}>
+        <div className="p-6 text-center"
+             style={{ backgroundColor: colors.success + '10', border: `1px solid ${colors.success + '30'}`, borderRadius: borderRadius.card }}>
           <TrendingUp size={32} style={{ color: colors.success }} className="mx-auto mb-3" />
           <h4 className="font-medium mb-2" style={{ color: colors.textPrimary }}>
             Track Performance
@@ -90,14 +92,14 @@ export default function PostJobForm({ onSuccess }: PostJobFormProps) {
       </div>
 
       {/* Process Steps */}
-      <div className="p-6 rounded-xl" style={{ backgroundColor: colors.surface }}>
+      <div className="p-6" style={{ backgroundColor: colors.surface, borderRadius: borderRadius.card }}>
         <h3 className="text-lg font-semibold mb-4" style={{ color: colors.textPrimary }}>
           How It Works
         </h3>
         <div className="space-y-3">
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium"
-                 style={{ backgroundColor: colors.primary }}>
+            <div className="w-8 h-8 flex items-center justify-center text-white font-medium"
+                 style={{ backgroundColor: colors.primary, borderRadius: borderRadius.full }}>
               1
             </div>
             <p className="ml-3 text-sm" style={{ color: colors.textSecondary }}>
@@ -105,8 +107,8 @@ export default function PostJobForm({ onSuccess }: PostJobFormProps) {
             </p>
           </div>
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium"
-                 style={{ backgroundColor: colors.primary }}>
+            <div className="w-8 h-8 flex items-center justify-center text-white font-medium"
+                 style={{ backgroundColor: colors.primary, borderRadius: borderRadius.full }}>
               2
             </div>
             <p className="ml-3 text-sm" style={{ color: colors.textSecondary }}>
@@ -114,8 +116,8 @@ export default function PostJobForm({ onSuccess }: PostJobFormProps) {
             </p>
           </div>
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium"
-                 style={{ backgroundColor: colors.primary }}>
+            <div className="w-8 h-8 flex items-center justify-center text-white font-medium"
+                 style={{ backgroundColor: colors.primary, borderRadius: borderRadius.full }}>
               3
             </div>
             <p className="ml-3 text-sm" style={{ color: colors.textSecondary }}>
@@ -123,8 +125,8 @@ export default function PostJobForm({ onSuccess }: PostJobFormProps) {
             </p>
           </div>
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium"
-                 style={{ backgroundColor: colors.success }}>
+            <div className="w-8 h-8 flex items-center justify-center text-white font-medium"
+                 style={{ backgroundColor: colors.success, borderRadius: borderRadius.full }}>
               ✓
             </div>
             <p className="ml-3 text-sm" style={{ color: colors.textSecondary }}>
@@ -141,10 +143,11 @@ export default function PostJobForm({ onSuccess }: PostJobFormProps) {
         </p>
         <button
           onClick={() => router.push('/demo')}
-          className="inline-flex items-center px-6 py-2 rounded-lg border transition-colors hover:bg-gray-50"
+          className="inline-flex items-center px-6 py-2 border transition-colors hover:bg-gray-50"
           style={{
             borderColor: colors.border,
-            color: colors.textPrimary
+            color: colors.textPrimary,
+            borderRadius: borderRadius.button
           }}
         >
           Watch Demo

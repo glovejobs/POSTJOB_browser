@@ -168,7 +168,7 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto"></div>
+          <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 animate-spin mx-auto" style={{ borderRadius: BRAND_CONFIG.borderRadius.full }}></div>
           <p className="text-xs text-gray-500 mt-2">Loading dashboard...</p>
         </div>
       </div>
@@ -199,11 +199,12 @@ export default function Dashboard() {
               <li key={item.label}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  className={`flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium transition-all ${
                     item.active
                       ? 'bg-gray-900 text-white'
                       : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }`}
+                  style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
                 >
                   <item.icon className="h-3.5 w-3.5 flex-shrink-0" />
                   {!sidebarCollapsed && <span>{item.label}</span>}
@@ -217,7 +218,8 @@ export default function Dashboard() {
         <div className="p-2 border-t border-gray-100">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2.5 px-2.5 py-1.5 w-full rounded-md text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
+            className="flex items-center gap-2.5 px-2.5 py-1.5 w-full text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
+            style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
           >
             <ArrowRightOnRectangleIcon className="h-3.5 w-3.5 flex-shrink-0" />
             {!sidebarCollapsed && <span>Sign out</span>}
@@ -237,7 +239,8 @@ export default function Dashboard() {
                 <input
                   type="text"
                   placeholder="Search jobs, companies, or locations..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:bg-white transition-colors"
+                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:bg-white transition-colors"
+                  style={{ borderRadius: BRAND_CONFIG.borderRadius.input }}
                 />
               </div>
               <button className="p-1.5 text-gray-500 hover:text-gray-700">
@@ -249,7 +252,8 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push('/post-job')}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-md hover:bg-gray-800 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium hover:bg-gray-800 transition-colors"
+                style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
               >
                 <PlusIcon className="h-3.5 w-3.5" />
                 Post Job
@@ -259,7 +263,7 @@ export default function Dashboard() {
                 {notifications > 0 ? (
                   <>
                     <BellSolidIcon className="h-4 w-4" />
-                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-red-500 rounded-full flex items-center justify-center">
+                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-red-500 flex items-center justify-center" style={{ borderRadius: BRAND_CONFIG.borderRadius.full }}>
                       <span className="text-xxs text-white font-medium">{notifications}</span>
                     </span>
                   </>
@@ -288,7 +292,8 @@ export default function Dashboard() {
                 <p className="text-xs text-gray-500 mt-0.5">Track your job postings and application metrics</p>
               </div>
               <div className="flex items-center gap-2">
-                <select className="text-xs px-2.5 py-1 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300">
+                <select className="text-xs px-2.5 py-1 bg-white border border-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                style={{ borderRadius: BRAND_CONFIG.borderRadius.input }}>
                   <option>Last 7 days</option>
                   <option>Last 30 days</option>
                   <option>Last 90 days</option>
@@ -303,7 +308,8 @@ export default function Dashboard() {
           {/* Stats grid */}
           <div className="grid grid-cols-4 gap-3 mb-4">
             {quickStats.map((stat) => (
-              <div key={stat.label} className="bg-white rounded-lg border border-gray-200 p-3">
+              <div key={stat.label} className="bg-white border border-gray-200 p-3"
+                style={{ borderRadius: BRAND_CONFIG.borderRadius.card }}>
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
@@ -319,7 +325,8 @@ export default function Dashboard() {
                       </div>
                     )}
                   </div>
-                  <div className={`p-1.5 rounded-md ${stat.bgColor}`}>
+                  <div className={`p-1.5 ${stat.bgColor}`}
+                    style={{ borderRadius: BRAND_CONFIG.borderRadius.sm }}>
                     <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
                   </div>
                 </div>
@@ -330,7 +337,8 @@ export default function Dashboard() {
           {/* Content grid */}
           <div className="grid grid-cols-3 gap-4">
             {/* Recent Jobs - 2 columns */}
-            <div className="col-span-2 bg-white rounded-lg border border-gray-200">
+            <div className="col-span-2 bg-white border border-gray-200"
+              style={{ borderRadius: BRAND_CONFIG.borderRadius.card }}>
               <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
                 <h2 className="text-sm font-medium text-gray-900">Recent Jobs</h2>
                 <Link
@@ -348,7 +356,8 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-500 mb-3">No jobs posted yet</p>
                     <button
                       onClick={() => router.push('/post-job')}
-                      className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors"
+                      className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
+                      style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
                     >
                       Post your first job
                     </button>
@@ -399,42 +408,48 @@ export default function Dashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-lg border border-gray-200">
+            <div className="bg-white border border-gray-200"
+              style={{ borderRadius: BRAND_CONFIG.borderRadius.card }}>
               <div className="px-4 py-2.5 border-b border-gray-100">
                 <h2 className="text-sm font-medium text-gray-900">Quick Actions</h2>
               </div>
               <div className="p-3 space-y-2">
                 <button
                   onClick={() => router.push('/post-job')}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors text-left"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                  style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
                 >
                   <PlusIcon className="h-3.5 w-3.5" />
                   Post a new job
                 </button>
                 <button
                   onClick={() => router.push('/jobs')}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors text-left"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                  style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
                 >
                   <MagnifyingGlassIcon className="h-3.5 w-3.5" />
                   Browse job board
                 </button>
                 <button
                   onClick={() => router.push('/applications/track')}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors text-left"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                  style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
                 >
                   <DocumentTextIcon className="h-3.5 w-3.5" />
                   Track applications
                 </button>
                 <button
                   onClick={() => router.push('/analytics')}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors text-left"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                  style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
                 >
                   <ChartBarIcon className="h-3.5 w-3.5" />
                   View analytics
                 </button>
                 <button
                   onClick={() => router.push('/payment/history')}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors text-left"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                  style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
                 >
                   <CreditCardIcon className="h-3.5 w-3.5" />
                   Payment history

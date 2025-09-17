@@ -149,8 +149,8 @@ export default function LoginPage() {
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-8">
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: colors.primary }}
+                className="w-10 h-10 flex items-center justify-center"
+                style={{ backgroundColor: colors.primary, borderRadius: BRAND_CONFIG.borderRadius.full }}
               >
                 <span className="text-white font-bold text-xl">P</span>
               </div>
@@ -179,7 +179,8 @@ export default function LoginPage() {
           {/* Google Sign In */}
           <button
             onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center px-4 py-3 border rounded-lg transition-all duration-200 hover:bg-gray-50 hover:shadow-md hover:-translate-y-0.5"
+            className="w-full flex items-center justify-center px-4 py-3 border transition-all duration-200 hover:bg-gray-50 hover:shadow-md hover:-translate-y-0.5"
+            style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
             style={{ borderColor: colors.border }}
           >
             <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
@@ -236,6 +237,7 @@ export default function LoginPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="input-field"
+                  style={{ borderRadius: BRAND_CONFIG.borderRadius.input }}
                   placeholder="Enter your full name"
                 />
               </div>
@@ -257,7 +259,8 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors"
+                className="w-full px-3 py-2 border focus:outline-none focus:ring-2 transition-colors"
+                style={{ borderRadius: BRAND_CONFIG.borderRadius.input }}
                 style={{
                   borderColor: colors.border,
                   color: colors.textPrimary
@@ -284,6 +287,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="input-field pr-10"
+                  style={{ borderRadius: BRAND_CONFIG.borderRadius.input }}
                   placeholder={isSignUp ? 'Create a strong password' : 'Enter your password'}
                 />
                 <button
@@ -310,7 +314,8 @@ export default function LoginPage() {
 
             {error && (
               <div
-                className="p-3 rounded-lg text-sm"
+                className="p-3 text-sm"
+                style={{ borderRadius: BRAND_CONFIG.borderRadius.md }}
                 style={{
                   backgroundColor: `${colors.error}15`,
                   color: colors.error,
@@ -325,6 +330,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="btn btn-primary w-full py-3 font-semibold"
+              style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
             >
               {loading ? (
                 <span className="flex items-center justify-center">

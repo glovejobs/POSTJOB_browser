@@ -114,7 +114,7 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
           <div
             key={toast.id}
             className={`
-              flex items-start gap-3 p-4 rounded-lg shadow-lg
+              flex items-start gap-3 p-4 shadow-lg
               min-w-[300px] max-w-[500px]
               animate-in slide-in-from-top-2 fade-in duration-300
               pointer-events-auto cursor-pointer
@@ -124,6 +124,7 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
               backgroundColor: typeColors.bg,
               color: typeColors.text,
               fontFamily: typography.fontFamily.primary,
+              borderRadius: BRAND_CONFIG.borderRadius.card,
               boxShadow: shadows.lg,
               animationDelay: `${index * 100}ms`
             }}

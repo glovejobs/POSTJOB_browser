@@ -59,7 +59,8 @@ export default function MobileNav({ isAuthenticated, userEmail, userName, onLogo
         <div className="flex items-center justify-between p-4">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-2 hover:bg-gray-100 transition-colors"
+            style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -69,10 +70,10 @@ export default function MobileNav({ isAuthenticated, userEmail, userName, onLogo
           </h1>
 
           <div className="flex items-center gap-2">
-            <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <button className="relative p-2 hover:bg-gray-100 transition-colors" style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}>
               <Bell size={20} />
               {notifications > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center" style={{ borderRadius: BRAND_CONFIG.borderRadius.full }}>
                   {notifications}
                 </span>
               )}
@@ -107,7 +108,7 @@ export default function MobileNav({ isAuthenticated, userEmail, userName, onLogo
               {isAuthenticated && (
                 <div className="p-4 border-b" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.primary }}>
+                    <div className="w-12 h-12 flex items-center justify-center" style={{ backgroundColor: colors.primary, borderRadius: BRAND_CONFIG.borderRadius.full }}>
                       <span className="text-white font-semibold text-lg">
                         {userName ? userName[0].toUpperCase() : 'U'}
                       </span>
@@ -122,8 +123,8 @@ export default function MobileNav({ isAuthenticated, userEmail, userName, onLogo
                       router.push('/post-job');
                       setIsOpen(false);
                     }}
-                    className="w-full py-2 rounded-lg text-white font-medium flex items-center justify-center gap-2"
-                    style={{ backgroundColor: colors.primary }}
+                    className="w-full py-2 text-white font-medium flex items-center justify-center gap-2"
+                    style={{ backgroundColor: colors.primary, borderRadius: BRAND_CONFIG.borderRadius.button }}
                   >
                     <Plus size={20} />
                     Post New Job
@@ -144,12 +145,13 @@ export default function MobileNav({ isAuthenticated, userEmail, userName, onLogo
                         router.push(item.path);
                         setIsOpen(false);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg mb-2 transition-colors ${
+                      className={`w-full flex items-center gap-3 px-3 py-3 mb-2 transition-colors ${
                         active ? 'bg-opacity-10' : 'hover:bg-gray-100'
                       }`}
                       style={{
                         backgroundColor: active ? colors.primary + '15' : 'transparent',
-                        color: active ? colors.primary : colors.textPrimary
+                        color: active ? colors.primary : colors.textPrimary,
+                        borderRadius: BRAND_CONFIG.borderRadius.button
                       }}
                     >
                       <Icon size={20} />
@@ -168,7 +170,8 @@ export default function MobileNav({ isAuthenticated, userEmail, userName, onLogo
                       onLogout?.();
                       setIsOpen(false);
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-3 text-red-600 hover:bg-red-50 transition-colors"
+                    style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
                   >
                     <LogOut size={20} />
                     <span className="font-medium">Logout</span>
@@ -191,7 +194,8 @@ export default function MobileNav({ isAuthenticated, userEmail, userName, onLogo
               <button
                 key={item.path}
                 onClick={() => router.push(item.path)}
-                className="flex flex-col items-center gap-1 py-2 rounded-lg transition-colors"
+                className="flex flex-col items-center gap-1 py-2 transition-colors"
+                style={{ borderRadius: BRAND_CONFIG.borderRadius.button }}
                 style={{
                   color: active ? colors.primary : colors.gray
                 }}

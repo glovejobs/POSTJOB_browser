@@ -30,10 +30,11 @@ export const Loader: React.FC<LoaderProps> = ({
   const loader = (
     <div className={`flex flex-col items-center justify-center ${className}`}>
       <div
-        className={`${sizeClasses[size]} border-t-transparent rounded-full animate-spin`}
+        className={`${sizeClasses[size]} border-t-transparent animate-spin`}
         style={{
           borderColor: `${color} transparent transparent transparent`,
-          borderStyle: 'solid'
+          borderStyle: 'solid',
+          borderRadius: BRAND_CONFIG.borderRadius.full
         }}
       />
       {text && (
@@ -58,7 +59,7 @@ export const Loader: React.FC<LoaderProps> = ({
   if (overlay) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div className="bg-white p-6 rounded-lg shadow-xl">
+        <div className="bg-white p-6 shadow-xl" style={{ borderRadius: BRAND_CONFIG.borderRadius.modal }}>
           {loader}
         </div>
       </div>
@@ -89,7 +90,7 @@ export const ButtonLoader: React.FC<ButtonLoaderProps> = ({
   size = 'md',
   fullWidth = false
 }) => {
-  const baseClasses = 'relative inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
+  const baseClasses = 'relative inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
 
   const variantClasses = {
     primary: `bg-[${BRAND_CONFIG.colors.primary}] text-white hover:bg-[${BRAND_CONFIG.colors.primaryDark}] focus:ring-[${BRAND_CONFIG.colors.primary}]`,
@@ -121,7 +122,8 @@ export const ButtonLoader: React.FC<ButtonLoaderProps> = ({
       style={{
         backgroundColor: variant === 'primary' ? BRAND_CONFIG.colors.primary :
                         variant === 'secondary' ? BRAND_CONFIG.colors.secondary :
-                        undefined
+                        undefined,
+        borderRadius: BRAND_CONFIG.borderRadius.button
       }}
     >
       {loading && (
@@ -143,9 +145,9 @@ export const PageLoader: React.FC<{ text?: string }> = ({ text = 'Loading...' })
 export const CardLoader: React.FC<{ lines?: number }> = ({ lines = 3 }) => {
   return (
     <div className="animate-pulse">
-      <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+      <div className="h-4 bg-gray-200 w-3/4 mb-3" style={{ borderRadius: BRAND_CONFIG.borderRadius.sm }}></div>
       {Array.from({ length: lines }).map((_, i) => (
-        <div key={i} className="h-3 bg-gray-200 rounded w-full mb-2"></div>
+        <div key={i} className="h-3 bg-gray-200 w-full mb-2" style={{ borderRadius: BRAND_CONFIG.borderRadius.sm }}></div>
       ))}
     </div>
   );
