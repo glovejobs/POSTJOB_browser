@@ -34,7 +34,7 @@ model JobBoard {
   name      String
   baseUrl   String   @map("base_url")
   postUrl   String   @map("post_url")
-  selectors Json     @default("{}")
+  selectors String   @default("{}") // JSON stored as string for SQLite
   enabled   Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -89,7 +89,8 @@ const mockPrismaClient = {
     createMany: async (_data?: any) => ({ count: 5 }),
     findMany: async (_query?: any) => [],
     update: async (_query?: any) => ({ id: '1', status: 'success' }),
-    updateMany: async (_query?: any) => ({ count: 1 })
+    updateMany: async (_query?: any) => ({ count: 1 }),
+    deleteMany: async (_query?: any) => ({ count: 1 })
   },
   job_postings: {
     createMany: async (_data?: any) => ({ count: 5 }),
@@ -114,7 +115,8 @@ const mockPrismaClient = {
       }
     }],
     update: async (_query?: any) => ({ id: '1', status: 'success' }),
-    updateMany: async (_query?: any) => ({ count: 1 })
+    updateMany: async (_query?: any) => ({ count: 1 }),
+    deleteMany: async (_query?: any) => ({ count: 1 })
   }
 };
 

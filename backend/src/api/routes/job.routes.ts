@@ -346,7 +346,7 @@ router.get('/:id', authenticate, async (req: AuthRequest, res): Promise<any> => 
   try {
     const jobId = req.params.id;
     const userId = req.user!.id;
-    
+
     const job = await prisma.job.findFirst({
       where: {
         id: jobId,
@@ -360,15 +360,97 @@ router.get('/:id', authenticate, async (req: AuthRequest, res): Promise<any> => 
         }
       }
     });
-    
+
     if (!job) {
       return res.status(404).json({ error: 'Job not found' });
     }
-    
+
     return res.json(job);
   } catch (error) {
     console.error('Error fetching job:', error);
     return res.status(500).json({ error: 'Failed to fetch job' });
+  }
+});
+
+// PUT /api/jobs/:id - Update job details
+router.put('/:id', authenticate, async (req: AuthRequest, res): Promise<any> => {
+  try {
+    const jobId = req.params.id;
+    const userId = req.user!.id;
+    const updates = req.body;
+
+    // Verify job belongs to user
+    const job = await prisma.job.findFirst({
+      where: {
+        id: jobId,
+        userId
+      }
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Handle board selection updates
+    if (updates.postings && Array.isArray(updates.postings)) {
+      // Delete existing postings
+      await prisma.jobPosting.deleteMany({
+        where: { jobId }
+      });
+
+      // Create new postings
+      if (updates.postings.length > 0) {
+        await prisma.jobPosting.createMany({
+          data: updates.postings.map((posting: any) => ({
+            jobId,
+            boardId: posting.board_id || posting.boardId,
+            status: posting.status || 'pending'
+          })),
+          skipDuplicates: true
+        });
+      }
+
+      // Update job status to payment_pending if boards are selected
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'payment_pending' }
+      });
+    }
+
+    // Update other job fields if provided
+    const updateData: any = {};
+    const allowedFields = ['title', 'description', 'location', 'company', 'salaryMin', 'salaryMax',
+                          'contactEmail', 'employmentType', 'department', 'status'];
+
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        updateData[field] = updates[field];
+      }
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: updateData
+      });
+    }
+
+    // Return updated job
+    const updatedJob = await prisma.job.findFirst({
+      where: { id: jobId },
+      include: {
+        postings: {
+          include: {
+            board: true
+          }
+        }
+      }
+    });
+
+    return res.json(updatedJob);
+  } catch (error) {
+    console.error('Error updating job:', error);
+    return res.status(500).json({ error: 'Failed to update job' });
   }
 });
 
