@@ -16,14 +16,18 @@ export const postingStrategies: Record<string, new () => BasePostingStrategy> = 
 
 // Factory function to create posting strategy instances
 export function createPostingStrategy(boardName: string): BasePostingStrategy | null {
-  const strategyKey = boardName.toLowerCase().replace(/\s+/g, '');
+  // Extract just the university name part (e.g., "Harvard University" -> "harvard")
+  const strategyKey = boardName.toLowerCase()
+    .replace(/\s+university.*$/i, '') // Remove "University" and anything after
+    .replace(/\s+/g, ''); // Remove remaining spaces
+
   const StrategyClass = postingStrategies[strategyKey];
-  
+
   if (!StrategyClass) {
-    console.error(`No posting strategy found for board: ${boardName}`);
+    console.error(`No posting strategy found for board: ${boardName} (key: ${strategyKey})`);
     return null;
   }
-  
+
   return new StrategyClass();
 }
 
