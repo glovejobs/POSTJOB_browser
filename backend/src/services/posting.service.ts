@@ -1,6 +1,6 @@
 import { browserService, JobData, PostingResult } from './browser.service';
 import { createPostingStrategy } from './posting-strategies';
-import prisma from '../database/prisma';
+import db from './database.service';
 
 interface PostingCredentials {
   username?: string;
@@ -24,7 +24,7 @@ export class PostingService {
     credentials: PostingCredentials
   ): Promise<BoardPostingResult> {
     const strategy = createPostingStrategy(boardName);
-    
+
     if (!strategy) {
       return {
         success: false,
@@ -36,9 +36,13 @@ export class PostingService {
 
     let page;
     try {
-      // Initialize browser if needed
+      // Initialize browser with retry logic
+      console.log(`📋 Initializing browser for ${boardName}...`);
       await browserService.initialize();
-      
+
+      // Small delay to ensure browser is ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       // Create a new page
       page = await browserService.createPage();
       
@@ -110,20 +114,16 @@ export class PostingService {
   async processJobPosting(jobId: string): Promise<BoardPostingResult[]> {
     try {
       // Fetch job details with boards
-      const job = await prisma.postjob_jobs.findUnique({
-        where: { id: jobId },
-        include: {
-          postjob_users: true,
-          job_postings: {
-            include: {
-              job_boards: true
-            }
-          }
-        }
-      });
+      const job = await db.job.findById(jobId, true);
 
       if (!job) {
         throw new Error('Job not found');
+      }
+
+      // Get user details
+      const user = await db.user.findById(job.user_id);
+      if (!user) {
+        throw new Error('User not found');
       }
 
       // Prepare job data
@@ -140,9 +140,9 @@ export class PostingService {
       };
 
       // Get enabled boards
-      const enabledBoards = job.job_postings
-        .filter((posting: any) => posting.job_boards.enabled)
-        .map((posting: any) => posting.job_boards.name);
+      const enabledBoards = (job.postings || [])
+        .filter((posting: any) => posting.board.enabled)
+        .map((posting: any) => posting.board.name);
 
       if (enabledBoards.length === 0) {
         throw new Error('No enabled boards found for this job');
@@ -150,7 +150,7 @@ export class PostingService {
 
       // Get credentials (in production, these would be encrypted/secured)
       const credentials: PostingCredentials = {
-        email: job.postjob_users.email,
+        email: user?.email || '',
         password: process.env.DEFAULT_POSTING_PASSWORD || 'demo-password',
         company: job.company
       };
@@ -160,20 +160,16 @@ export class PostingService {
 
       // Update database with results
       for (const result of results) {
-        const posting = job.job_postings.find(
-          (p: any) => p.job_boards.name.toLowerCase() === result.boardName.toLowerCase()
+        const posting = (job.postings || []).find(
+          (p: any) => p.board?.name?.toLowerCase() === result.boardName.toLowerCase()
         );
 
         if (posting) {
-          await prisma.job_postings.update({
-            where: { id: posting.id },
-            data: {
-              status: result.success ? 'completed' : 'failed',
-              external_url: result.externalUrl || null,
-              error_message: result.errorMessage || null,
-              posted_at: result.success ? new Date() : null,
-              updated_at: new Date()
-            }
+          await db.jobPosting.update(posting.id, {
+            status: result.success ? 'completed' : 'failed',
+            externalUrl: result.externalUrl || null,
+            errorMessage: result.errorMessage || null,
+            postedAt: result.success ? new Date().toISOString() : null
           });
         }
       }
@@ -182,12 +178,8 @@ export class PostingService {
       const allSuccess = results.every((r: any) => r.success);
       const allFailed = results.every((r: any) => !r.success);
 
-      await prisma.postjob_jobs.update({
-        where: { id: jobId },
-        data: {
-          status: allSuccess ? 'completed' : allFailed ? 'failed' : 'partial',
-          updated_at: new Date()
-        }
+      await db.job.update(jobId, {
+        status: allSuccess ? 'completed' : allFailed ? 'failed' : 'partial'
       });
 
       return results;
@@ -202,28 +194,26 @@ export class PostingService {
    */
   async retryFailedPostings(jobId: string): Promise<BoardPostingResult[]> {
     try {
+      // Get job details
+      const job = await db.job.findById(jobId, true);
+      if (!job) {
+        throw new Error('Job not found');
+      }
+
+      // Get user details
+      const user = await db.user.findById(job.user_id);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
       // Get failed postings
-      const failedPostings = await prisma.job_postings.findMany({
-        where: {
-          job_id: jobId,
-          status: 'failed'
-        },
-        include: {
-          job_boards: true,
-          postjob_jobs: {
-            include: {
-              postjob_users: true
-            }
-          }
-        }
-      });
+      const failedPostings = (job.postings || []).filter(
+        (p: any) => p.status === 'failed' && p.board?.enabled
+      );
 
       if (failedPostings.length === 0) {
         return [];
       }
-
-      // Prepare job data from the first posting
-      const job = failedPostings[0].postjob_jobs;
       const jobData: JobData = {
         title: job.title,
         description: job.description,
@@ -237,7 +227,7 @@ export class PostingService {
       };
 
       const credentials: PostingCredentials = {
-        email: job.postjob_users.email,
+        email: user?.email || '',
         password: process.env.DEFAULT_POSTING_PASSWORD || 'demo-password',
         company: job.company
       };
@@ -245,25 +235,21 @@ export class PostingService {
       // Retry each failed posting
       const results: BoardPostingResult[] = [];
       for (const posting of failedPostings) {
-        if (posting.job_boards.enabled) {
-          console.log(`🔄 Retrying ${posting.job_boards.name}...`);
+        if (posting.board.enabled) {
+          console.log(`🔄 Retrying ${posting.board.name}...`);
           const result = await this.postToBoard(
-            posting.job_boards.name,
+            posting.board.name,
             jobData,
             credentials
           );
           results.push(result);
 
           // Update database
-          await prisma.job_postings.update({
-            where: { id: posting.id },
-            data: {
-              status: result.success ? 'completed' : 'failed',
-              external_url: result.externalUrl || null,
-              error_message: result.errorMessage || null,
-              posted_at: result.success ? new Date() : null,
-              updated_at: new Date()
-            }
+          await db.jobPosting.update(posting.id, {
+            status: result.success ? 'completed' : 'failed',
+            externalUrl: result.externalUrl || null,
+            errorMessage: result.errorMessage || null,
+            postedAt: result.success ? new Date().toISOString() : null
           });
 
           // Delay between retries

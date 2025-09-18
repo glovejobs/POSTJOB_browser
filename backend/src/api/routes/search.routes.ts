@@ -1,11 +1,9 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../../middleware/auth.middleware';
+import db from '../../services/database.service';
+import supabase from '../../database/supabase';
 
 const router = Router();
-const prisma = new PrismaClient();
-
-// SearchFilters and SortOptions interfaces removed as they're not used
 
 // GET /api/search/jobs - Advanced job search
 router.get('/jobs', authenticate, async (req: AuthRequest, res) => {
@@ -33,167 +31,175 @@ router.get('/jobs', authenticate, async (req: AuthRequest, res) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    // Build where clause
-    const where: any = { userId };
+    // Start with basic user jobs query
+    let query = supabase
+      .from('postjob_jobs')
+      .select(`
+        *,
+        postings:job_postings(
+          status,
+          board:job_boards(name)
+        )
+      `)
+      .eq('user_id', userId);
 
-    // Text search
+    // Text search - using ilike for case-insensitive search
     if (q) {
-      where.OR = [
-        { title: { contains: q as string } },
-        { description: { contains: q as string } },
-        { company: { contains: q as string } },
-        { location: { contains: q as string } }
-      ];
+      const searchTerm = `%${q}%`;
+      query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm},company.ilike.${searchTerm},location.ilike.${searchTerm}`);
     }
 
     // Status filter
     if (status) {
       const statuses = Array.isArray(status) ? status : [status];
-      where.status = { in: statuses };
+      query = query.in('status', statuses);
     }
 
     // Employment type filter
     if (employmentType) {
       const types = Array.isArray(employmentType) ? employmentType : [employmentType];
-      where.employmentType = { in: types };
+      query = query.in('employment_type', types);
     }
 
     // Location filter
     if (location) {
       const locations = Array.isArray(location) ? location : [location];
-      where.location = { in: locations };
+      query = query.in('location', locations);
     }
 
     // Salary range filter
-    if (salaryMin || salaryMax) {
-      where.AND = where.AND || [];
-      if (salaryMin) {
-        where.AND.push({ salaryMax: { gte: parseInt(salaryMin as string) } });
-      }
-      if (salaryMax) {
-        where.AND.push({ salaryMin: { lte: parseInt(salaryMax as string) } });
-      }
+    if (salaryMin) {
+      query = query.gte('salary_max', parseInt(salaryMin as string));
+    }
+    if (salaryMax) {
+      query = query.lte('salary_min', parseInt(salaryMax as string));
     }
 
     // Company filter
     if (company) {
       const companies = Array.isArray(company) ? company : [company];
-      where.company = { in: companies };
+      query = query.in('company', companies);
     }
 
     // Date range filter
-    if (dateFrom || dateTo) {
-      where.createdAt = {};
-      if (dateFrom) {
-        where.createdAt.gte = new Date(dateFrom as string);
-      }
-      if (dateTo) {
-        where.createdAt.lte = new Date(dateTo as string);
-      }
+    if (dateFrom) {
+      query = query.gte('created_at', new Date(dateFrom as string).toISOString());
+    }
+    if (dateTo) {
+      query = query.lte('created_at', new Date(dateTo as string).toISOString());
     }
 
-    // Has applications filter
-    if (hasApplications === 'true') {
-      where.applications = { some: {} };
-    } else if (hasApplications === 'false') {
-      where.applications = { none: {} };
-    }
-
-    // Board filter
-    if (boardId) {
-      where.postings = {
-        some: { boardId: boardId as string }
-      };
-    }
-
-    // Build orderBy
-    let orderBy: any = {};
+    // Apply sorting
     switch (sortBy) {
       case 'title':
-        orderBy = { title: sortOrder };
+        query = query.order('title', { ascending: sortOrder === 'asc' });
         break;
       case 'company':
-        orderBy = { company: sortOrder };
+        query = query.order('company', { ascending: sortOrder === 'asc' });
         break;
       case 'salary':
-        orderBy = { salaryMax: sortOrder };
-        break;
-      case 'applications':
-        orderBy = { applications: { _count: sortOrder } };
+        query = query.order('salary_max', { ascending: sortOrder === 'asc' });
         break;
       default:
-        orderBy = { createdAt: sortOrder };
+        query = query.order('created_at', { ascending: sortOrder === 'asc' });
     }
 
-    // Execute search with pagination
-    const [jobs, total] = await Promise.all([
-      prisma.job.findMany({
-        where,
-        orderBy,
-        skip,
-        take: limitNum,
-        include: {
-          _count: {
-            select: {
-              applications: true,
-              postings: true
-            }
-          },
-          postings: {
-            select: {
-              board: { select: { name: true } },
-              status: true
-            }
-          }
-        }
-      }),
-      prisma.job.count({ where })
-    ]);
+    // Apply pagination
+    query = query.range(skip, skip + limitNum - 1);
+
+    // Execute search
+    const { data: jobs, error } = await query;
+
+    if (error) {
+      console.error('Search error:', error);
+      return res.status(500).json({ error: 'Failed to search jobs' });
+    }
+
+    // Get total count for pagination
+    const { count: total } = await supabase
+      .from('postjob_jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    // Process results to add application counts and apply complex filters
+    const processedJobs = [];
+    for (const job of jobs || []) {
+      // Get application count for each job
+      const { count: appCount } = await supabase
+        .from('applications')
+        .select('*', { count: 'exact', head: true })
+        .eq('job_id_link', job.id);
+
+      // Filter based on hasApplications if specified
+      if (hasApplications === 'true' && (appCount || 0) === 0) continue;
+      if (hasApplications === 'false' && (appCount || 0) > 0) continue;
+
+      // Filter by board if specified
+      if (boardId) {
+        const { data: postings } = await supabase
+          .from('job_postings')
+          .select('board_id')
+          .eq('job_id_link', job.id)
+          .eq('board_id', boardId);
+        if (!postings || postings.length === 0) continue;
+      }
+
+      processedJobs.push({
+        ...job,
+        applicationCount: appCount || 0,
+        postingCount: (job.postings || []).length,
+        boards: (job.postings || []).map((p: any) => p.board?.name).filter(Boolean)
+      });
+    }
 
     // Get facets for filtering
-    const [statusFacets, typeFacets, locationFacets, companyFacets] = await Promise.all([
-      prisma.job.groupBy({
-        by: ['status'],
-        where: { userId },
-        _count: true
-      }),
-      prisma.job.groupBy({
-        by: ['employmentType'],
-        where: { userId, employmentType: { not: null } },
-        _count: true
-      }),
-      prisma.job.groupBy({
-        by: ['location'],
-        where: { userId },
-        _count: true
-      }),
-      prisma.job.groupBy({
-        by: ['company'],
-        where: { userId },
-        _count: true
-      })
-    ]);
+    const { data: allUserJobs } = await supabase
+      .from('postjob_jobs')
+      .select('status, employment_type, location, company')
+      .eq('user_id', userId);
+
+    // Calculate facets
+    const statusFacets = (allUserJobs || []).reduce((acc: any, job: any) => {
+      acc[job.status] = (acc[job.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const typeFacets = (allUserJobs || []).reduce((acc: any, job: any) => {
+      if (job.employment_type) {
+        acc[job.employment_type] = (acc[job.employment_type] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    const locationFacets = (allUserJobs || []).reduce((acc: any, job: any) => {
+      if (job.location) {
+        acc[job.location] = (acc[job.location] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    const companyFacets = (allUserJobs || []).reduce((acc: any, job: any) => {
+      if (job.company) {
+        acc[job.company] = (acc[job.company] || 0) + 1;
+      }
+      return acc;
+    }, {});
 
     return res.json({
-      results: jobs.map(job => ({
-        ...job,
-        applicationCount: job._count.applications,
-        postingCount: job._count.postings,
-        boards: job.postings.map(p => p.board.name)
-      })),
+      results: processedJobs,
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total,
-        totalPages: Math.ceil(total / limitNum),
-        hasNext: pageNum * limitNum < total,
+        total: total || 0,
+        totalPages: Math.ceil((total || 0) / limitNum),
+        hasNext: pageNum * limitNum < (total || 0),
         hasPrev: pageNum > 1
       },
       facets: {
-        status: statusFacets.map(f => ({ value: f.status, count: f._count })),
-        employmentType: typeFacets.map(f => ({ value: f.employmentType, count: f._count })),
-        location: locationFacets.map(f => ({ value: f.location, count: f._count })),
-        company: companyFacets.map(f => ({ value: f.company, count: f._count }))
+        status: Object.entries(statusFacets).map(([value, count]) => ({ value, count })),
+        employmentType: Object.entries(typeFacets).map(([value, count]) => ({ value, count })),
+        location: Object.entries(locationFacets).map(([value, count]) => ({ value, count })),
+        company: Object.entries(companyFacets).map(([value, count]) => ({ value, count }))
       }
     });
   } catch (error) {
@@ -226,139 +232,154 @@ router.get('/applications', authenticate, async (req: AuthRequest, res) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    // Build where clause
-    const where: any = {
-      job: { userId }
-    };
+    // Get user job IDs first
+    const { data: userJobs } = await supabase
+      .from('postjob_jobs')
+      .select('id')
+      .eq('user_id', userId);
+
+    const jobIds = (userJobs || []).map(j => j.id);
+
+    if (jobIds.length === 0) {
+      return res.json({
+        results: [],
+        pagination: { page: pageNum, limit: limitNum, total: 0, totalPages: 0, hasNext: false, hasPrev: false },
+        facets: { status: [], jobs: [] }
+      });
+    }
+
+    // Build applications query
+    let query = supabase
+      .from('applications')
+      .select(`
+        *,
+        job:job_id_link(title, company)
+      `)
+      .in('job_id_link', jobIds);
 
     // Text search
     if (q) {
-      where.OR = [
-        { candidateName: { contains: q as string } },
-        { candidateEmail: { contains: q as string } },
-        { coverLetter: { contains: q as string } }
-      ];
+      const searchTerm = `%${q}%`;
+      query = query.or(`candidate_name.ilike.${searchTerm},candidate_email.ilike.${searchTerm},cover_letter.ilike.${searchTerm}`);
     }
 
     // Status filter
     if (status) {
       const statuses = Array.isArray(status) ? status : [status];
-      where.status = { in: statuses };
+      query = query.in('status', statuses);
     }
 
     // Job filter
     if (jobId) {
-      where.jobId = jobId;
+      query = query.eq('job_id_link', jobId);
     }
 
     // Score range filter
-    if (scoreMin || scoreMax) {
-      where.score = {};
-      if (scoreMin) {
-        where.score.gte = parseInt(scoreMin as string);
-      }
-      if (scoreMax) {
-        where.score.lte = parseInt(scoreMax as string);
-      }
+    if (scoreMin) {
+      query = query.gte('score', parseInt(scoreMin as string));
+    }
+    if (scoreMax) {
+      query = query.lte('score', parseInt(scoreMax as string));
     }
 
     // Date range filter
-    if (dateFrom || dateTo) {
-      where.appliedAt = {};
-      if (dateFrom) {
-        where.appliedAt.gte = new Date(dateFrom as string);
-      }
-      if (dateTo) {
-        where.appliedAt.lte = new Date(dateTo as string);
-      }
+    if (dateFrom) {
+      query = query.gte('applied_at', new Date(dateFrom as string).toISOString());
+    }
+    if (dateTo) {
+      query = query.lte('applied_at', new Date(dateTo as string).toISOString());
     }
 
     // Portfolio filter
     if (hasPortfolio === 'true') {
-      where.portfolio = { not: null };
+      query = query.not('portfolio', 'is', null);
     } else if (hasPortfolio === 'false') {
-      where.portfolio = null;
+      query = query.is('portfolio', null);
     }
 
     // LinkedIn filter
     if (hasLinkedIn === 'true') {
-      where.linkedIn = { not: null };
+      query = query.not('linkedin_url', 'is', null);
     } else if (hasLinkedIn === 'false') {
-      where.linkedIn = null;
+      query = query.is('linkedin_url', null);
     }
 
-    // Build orderBy
-    let orderBy: any = {};
+    // Apply sorting
     switch (sortBy) {
       case 'candidateName':
-        orderBy = { candidateName: sortOrder };
+        query = query.order('candidate_name', { ascending: sortOrder === 'asc' });
         break;
       case 'score':
-        orderBy = { score: sortOrder };
+        query = query.order('score', { ascending: sortOrder === 'asc' });
         break;
       case 'status':
-        orderBy = { status: sortOrder };
+        query = query.order('status', { ascending: sortOrder === 'asc' });
         break;
       default:
-        orderBy = { appliedAt: sortOrder };
+        query = query.order('applied_at', { ascending: sortOrder === 'asc' });
     }
 
-    // Execute search with pagination
-    const [applications, total] = await Promise.all([
-      prisma.application.findMany({
-        where,
-        orderBy,
-        skip,
-        take: limitNum,
-        include: {
-          job: {
-            select: {
-              title: true,
-              company: true
-            }
-          },
-          _count: {
-            select: { communications: true }
-          }
-        }
-      }),
-      prisma.application.count({ where })
-    ]);
+    // Apply pagination
+    query = query.range(skip, skip + limitNum - 1);
+
+    // Execute search
+    const { data: applications, error } = await query;
+
+    if (error) {
+      console.error('Application search error:', error);
+      return res.status(500).json({ error: 'Failed to search applications' });
+    }
+
+    // Get total count
+    const { count: total } = await supabase
+      .from('applications')
+      .select('*', { count: 'exact', head: true })
+      .in('job_id_link', jobIds);
+
+    // Get communication counts for each application
+    const processedApplications = [];
+    for (const app of applications || []) {
+      const { count: commCount } = await supabase
+        .from('application_communications')
+        .select('*', { count: 'exact', head: true })
+        .eq('application_id', app.id);
+
+      processedApplications.push({
+        ...app,
+        communicationCount: commCount || 0
+      });
+    }
 
     // Get facets
-    const [statusFacets, jobFacets] = await Promise.all([
-      prisma.application.groupBy({
-        by: ['status'],
-        where: { job: { userId } },
-        _count: true
-      }),
-      prisma.application.findMany({
-        where: { job: { userId } },
-        select: {
-          job: {
-            select: { id: true, title: true }
-          }
-        },
-        distinct: ['jobId']
-      })
-    ]);
+    const { data: allApplications } = await supabase
+      .from('applications')
+      .select('status, job_id')
+      .in('job_id_link', jobIds);
+
+    const statusFacets = (allApplications || []).reduce((acc: any, app: any) => {
+      acc[app.status] = (acc[app.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Get job facets
+    const { data: jobFacets } = await supabase
+      .from('postjob_jobs')
+      .select('id, title')
+      .eq('user_id', userId);
 
     return res.json({
-      results: applications.map(app => ({
-        ...app,
-        communicationCount: app._count.communications
-      })),
+      results: processedApplications,
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total,
-        totalPages: Math.ceil(total / limitNum),
-        hasNext: pageNum * limitNum < total,
+        total: total || 0,
+        totalPages: Math.ceil((total || 0) / limitNum),
+        hasNext: pageNum * limitNum < (total || 0),
         hasPrev: pageNum > 1
       },
       facets: {
-        status: statusFacets.map(f => ({ value: f.status, count: f._count })),
-        jobs: jobFacets.map(f => ({ value: f.job.id, label: f.job.title }))
+        status: Object.entries(statusFacets).map(([value, count]) => ({ value, count })),
+        jobs: (jobFacets || []).map(job => ({ value: job.id, label: job.title }))
       }
     });
   } catch (error) {
@@ -377,11 +398,8 @@ router.post('/saved', authenticate, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Name, type, and filters are required' });
     }
 
-    // Store saved search in user's profile (using emailPreferences field temporarily)
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
-
+    // Get user
+    const user = await db.user.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -389,9 +407,8 @@ router.post('/saved', authenticate, async (req: AuthRequest, res) => {
     // Parse existing saved searches or initialize
     let savedSearches = [];
     try {
-      if (user.emailPreferences) {
-        const prefs = JSON.parse(user.emailPreferences);
-        savedSearches = prefs.savedSearches || [];
+      if (user.email_preferences && typeof user.email_preferences === 'object') {
+        savedSearches = (user.email_preferences as any).savedSearches || [];
       }
     } catch (e) {
       savedSearches = [];
@@ -415,13 +432,11 @@ router.post('/saved', authenticate, async (req: AuthRequest, res) => {
     }
 
     // Update user preferences
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        emailPreferences: JSON.stringify({
-          ...JSON.parse(user.emailPreferences || '{}'),
-          savedSearches
-        })
+    const currentPrefs = user.email_preferences || {};
+    await db.user.update(userId, {
+      emailPreferences: {
+        ...currentPrefs,
+        savedSearches
       }
     });
 
@@ -440,20 +455,15 @@ router.get('/saved', authenticate, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { emailPreferences: true }
-    });
-
+    const user = await db.user.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     let savedSearches = [];
     try {
-      if (user.emailPreferences) {
-        const prefs = JSON.parse(user.emailPreferences);
-        savedSearches = prefs.savedSearches || [];
+      if (user.email_preferences && typeof user.email_preferences === 'object') {
+        savedSearches = (user.email_preferences as any).savedSearches || [];
       }
     } catch (e) {
       savedSearches = [];
@@ -472,19 +482,15 @@ router.delete('/saved/:id', authenticate, async (req: AuthRequest, res) => {
     const userId = req.user!.id;
     const searchId = req.params.id;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
-
+    const user = await db.user.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     let savedSearches = [];
     try {
-      if (user.emailPreferences) {
-        const prefs = JSON.parse(user.emailPreferences);
-        savedSearches = prefs.savedSearches || [];
+      if (user.email_preferences && typeof user.email_preferences === 'object') {
+        savedSearches = (user.email_preferences as any).savedSearches || [];
       }
     } catch (e) {
       savedSearches = [];
@@ -494,13 +500,11 @@ router.delete('/saved/:id', authenticate, async (req: AuthRequest, res) => {
     savedSearches = savedSearches.filter((s: any) => s.id !== searchId);
 
     // Update user preferences
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        emailPreferences: JSON.stringify({
-          ...JSON.parse(user.emailPreferences || '{}'),
-          savedSearches
-        })
+    const currentPrefs = user.email_preferences || {};
+    await db.user.update(userId, {
+      emailPreferences: {
+        ...currentPrefs,
+        savedSearches
       }
     });
 
@@ -523,45 +527,54 @@ router.get('/suggestions', authenticate, async (req: AuthRequest, res) => {
 
     const query = q as string;
     const suggestions: any[] = [];
+    const searchTerm = `%${query}%`;
 
     if (type === 'all' || type === 'jobs') {
       // Job title suggestions
-      const jobTitles = await prisma.job.findMany({
-        where: {
-          userId,
-          title: { contains: query }
-        },
-        select: { title: true },
-        distinct: ['title'],
-        take: 5
-      });
-      suggestions.push(...jobTitles.map(j => ({ type: 'job', value: j.title })));
+      const { data: jobTitles } = await supabase
+        .from('postjob_jobs')
+        .select('title')
+        .eq('user_id', userId)
+        .ilike('title', searchTerm)
+        .limit(5);
+
+      const uniqueTitles = [...new Set((jobTitles || []).map(j => j.title))];
+      suggestions.push(...uniqueTitles.map(title => ({ type: 'job', value: title })));
 
       // Company suggestions
-      const companies = await prisma.job.findMany({
-        where: {
-          userId,
-          company: { contains: query }
-        },
-        select: { company: true },
-        distinct: ['company'],
-        take: 5
-      });
-      suggestions.push(...companies.map(c => ({ type: 'company', value: c.company })));
+      const { data: companies } = await supabase
+        .from('postjob_jobs')
+        .select('company')
+        .eq('user_id', userId)
+        .ilike('company', searchTerm)
+        .not('company', 'is', null)
+        .limit(5);
+
+      const uniqueCompanies = [...new Set((companies || []).map(c => c.company))];
+      suggestions.push(...uniqueCompanies.map(company => ({ type: 'company', value: company })));
     }
 
     if (type === 'all' || type === 'applications') {
-      // Candidate name suggestions
-      const candidates = await prisma.application.findMany({
-        where: {
-          job: { userId },
-          candidateName: { contains: query }
-        },
-        select: { candidateName: true },
-        distinct: ['candidateName'],
-        take: 5
-      });
-      suggestions.push(...candidates.map(c => ({ type: 'candidate', value: c.candidateName })));
+      // Get user job IDs
+      const { data: userJobs } = await supabase
+        .from('postjob_jobs')
+        .select('id')
+        .eq('user_id', userId);
+
+      const jobIds = (userJobs || []).map(j => j.id);
+
+      if (jobIds.length > 0) {
+        // Candidate name suggestions
+        const { data: candidates } = await supabase
+          .from('applications')
+          .select('candidate_name')
+          .in('job_id_link', jobIds)
+          .ilike('candidate_name', searchTerm)
+          .limit(5);
+
+        const uniqueCandidates = [...new Set((candidates || []).map(c => c.candidate_name))];
+        suggestions.push(...uniqueCandidates.map(name => ({ type: 'candidate', value: name })));
+      }
     }
 
     return res.json({ suggestions: suggestions.slice(0, 10) });

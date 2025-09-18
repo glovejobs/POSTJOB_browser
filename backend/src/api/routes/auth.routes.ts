@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import prisma from '../../database/prisma';
+import db from '../../services/database.service';
 import { generateApiKey } from '../../utils/auth';
 
 const router = Router();
@@ -14,9 +14,7 @@ router.post('/register', async (req, res): Promise<any> => {
     }
     
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
+    const existingUser = await db.user.findByEmail(email);
     
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' });
@@ -26,11 +24,9 @@ router.post('/register', async (req, res): Promise<any> => {
     const apiKey = generateApiKey();
     
     // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        apiKey
-      }
+    const user = await db.user.create({
+      email,
+      apiKey
     });
     
     return res.status(201).json({
@@ -55,9 +51,7 @@ router.post('/login', async (req, res): Promise<any> => {
     }
 
     // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
+    const user = await db.user.findByEmail(email);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found. Please register first.' });
@@ -68,7 +62,7 @@ router.post('/login', async (req, res): Promise<any> => {
     return res.json({
       id: user.id,
       email: user.email,
-      apiKey: user.apiKey,
+      apiKey: user.api_key,
       message: 'Login successful'
     });
   } catch (error) {
@@ -86,14 +80,7 @@ router.get('/me', async (req, res): Promise<any> => {
       return res.status(401).json({ error: 'API key required' });
     }
     
-    const user = await prisma.user.findUnique({
-      where: { apiKey },
-      select: {
-        id: true,
-        email: true,
-        createdAt: true
-      }
-    });
+    const user = await db.user.findByApiKey(apiKey);
     
     if (!user) {
       return res.status(401).json({ error: 'Invalid API key' });

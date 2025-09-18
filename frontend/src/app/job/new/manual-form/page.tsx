@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Save, Eye } from 'lucide-react';
 import { BRAND_CONFIG } from '../../../../../../shared/constants';
 import { jobs } from '@/lib/api';
+import DashboardLayout from '@/components/DashboardLayout';
 
 export default function ManualJobFormPage() {
   const router = useRouter();
@@ -61,41 +62,34 @@ export default function ManualJobFormPage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: colors.surface, fontFamily: typography.fontFamily.primary }}>
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b px-6 py-4"
-              style={{ borderColor: colors.border }}>
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push('/job/new')}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              style={{ color: colors.textSecondary }}
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div>
-              <h1 className="text-2xl font-semibold" style={{ color: colors.textPrimary }}>
-                Create Job Post
-              </h1>
-              <p className="text-sm" style={{ color: colors.textSecondary }}>
-                Fill in the details for your job posting
-              </p>
+    <DashboardLayout title="Create Job Post">
+      <div className="min-h-screen bg-gray-50 flex flex-col" style={{ fontFamily: typography.fontFamily.primary }}>
+        <div className="flex-1 p-6">
+          <div className="max-w-4xl mx-auto">
+          {/* Header Card */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold mb-2" style={{ color: colors.textPrimary }}>
+                  Create Job Post
+                </h1>
+                <p className="text-sm" style={{ color: colors.textSecondary }}>
+                  Fill in the details for your job posting
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="px-4 py-2 rounded-lg border transition-colors hover:bg-gray-50 flex items-center gap-2"
+                style={{ borderColor: colors.border, color: colors.textSecondary }}
+              >
+                <Eye size={18} />
+                Preview
+              </button>
             </div>
           </div>
 
-          <button
-            type="button"
-            className="px-4 py-2 rounded-lg border transition-colors hover:bg-gray-50 flex items-center gap-2"
-            style={{ borderColor: colors.border, color: colors.textSecondary }}
-          >
-            <Eye size={18} />
-            Preview
-          </button>
-        </div>
-      </header>
-
-      {/* Form */}
+          {/* Form */}
       <main className="max-w-4xl mx-auto p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
@@ -264,42 +258,58 @@ export default function ManualJobFormPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => router.push('/job/new')}
-              className="px-6 py-3 rounded-lg border font-medium transition-colors hover:bg-gray-50"
-              style={{ borderColor: colors.border, color: colors.textSecondary }}
-            >
-              Cancel
-            </button>
+        </form>
+          </div>
+        </div>
 
-            <div className="flex gap-3">
+        {/* Sticky Action Buttons */}
+        <div className="sticky bottom-0 bg-white border-t shadow-lg" style={{ borderColor: colors.border }}>
+          <div className="max-w-4xl mx-auto p-6">
+            <div className="flex items-center justify-between">
               <button
                 type="button"
-                className="px-6 py-3 rounded-lg border font-medium transition-colors hover:bg-gray-50"
-                style={{ borderColor: colors.border, color: colors.textPrimary }}
-              >
-                Save as Draft
-              </button>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-3 rounded-lg font-medium text-white transition-all transform hover:scale-105 flex items-center gap-2"
+                onClick={() => router.push('/job/new')}
+                className="px-6 py-3 border font-medium transition-colors hover:bg-gray-50"
                 style={{
-                  background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)`,
-                  opacity: loading ? 0.7 : 1
+                  borderColor: colors.border,
+                  color: colors.textSecondary,
+                  borderRadius: BRAND_CONFIG.borderRadius.button
                 }}
               >
-                <Save size={18} />
-                {loading ? 'Creating...' : 'Continue to Board Selection'}
+                Cancel
               </button>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="px-6 py-3 border font-medium transition-colors hover:bg-gray-50"
+                  style={{
+                    borderColor: colors.border,
+                    color: colors.textPrimary,
+                    borderRadius: BRAND_CONFIG.borderRadius.button
+                  }}
+                >
+                  Save as Draft
+                </button>
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="px-6 py-3 font-medium text-white transition-all transform hover:scale-105 flex items-center gap-2"
+                  style={{
+                    background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)`,
+                    opacity: loading ? 0.7 : 1,
+                    borderRadius: BRAND_CONFIG.borderRadius.button
+                  }}
+                >
+                  <Save size={18} />
+                  {loading ? 'Creating...' : 'Continue to Board Selection'}
+                </button>
+              </div>
             </div>
           </div>
-        </form>
-      </main>
-    </div>
+        </div>
+      </div>
+    </DashboardLayout>
   );
 }

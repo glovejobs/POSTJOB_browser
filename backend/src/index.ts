@@ -3,7 +3,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { PrismaClient } from '@prisma/client';
 import rateLimit from 'express-rate-limit';
 
 // Import configuration (validates environment on load)
@@ -24,13 +23,11 @@ import paymentRoutes from './api/routes/payment.routes';
 
 // Import queue
 import { initQueue } from './queue/job.queue';
+import { initializeJobBoards } from './utils/initializeBoards';
 
 // Initialize Express app
 const app = express();
 const httpServer = createServer(app);
-
-// Initialize Prisma
-export const prisma = new PrismaClient();
 
 // Initialize Socket.IO
 export const io = new Server(httpServer, {
@@ -111,6 +108,18 @@ io.on('connection', (socket) => {
 // Initialize queue
 initQueue();
 
+// Warm up browser on startup (non-blocking)
+setTimeout(async () => {
+  try {
+    console.log('🔥 Warming up browser service...');
+    const { browserService } = await import('./services/browser.service');
+    await browserService.initialize();
+    console.log('✅ Browser service ready');
+  } catch (error) {
+    console.error('⚠️  Browser warm-up failed (will retry on first job):', error);
+  }
+}, 5000); // Wait 5 seconds after startup
+
 // Health check endpoint
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
@@ -127,35 +136,49 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 // Graceful shutdown handling
 process.on('SIGTERM', async () => {
   console.log('🔄 SIGTERM received, shutting down gracefully...');
-  
+
   // Close HTTP server
   httpServer.close(() => {
     console.log('📡 HTTP server closed');
   });
-  
-  // Disconnect Prisma
-  await prisma.$disconnect();
-  console.log('🗄️  Database disconnected');
-  
+
+  // Close browser
+  try {
+    const { browserService } = await import('./services/browser.service');
+    await browserService.close();
+    console.log('🌐 Browser closed');
+  } catch (error) {
+    console.error('Error closing browser:', error);
+  }
+
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('🔄 SIGINT received, shutting down gracefully...');
-  
+
   httpServer.close(() => {
     console.log('📡 HTTP server closed');
   });
-  
-  await prisma.$disconnect();
-  console.log('🗄️  Database disconnected');
-  
+
+  // Close browser
+  try {
+    const { browserService } = await import('./services/browser.service');
+    await browserService.close();
+    console.log('🌐 Browser closed');
+  } catch (error) {
+    console.error('Error closing browser:', error);
+  }
+
   process.exit(0);
 });
 
 // Start server
-httpServer.listen(config.PORT, () => {
-  console.log(`🚀 Server running on port ${config.PORT}`);
+httpServer.listen(config.PORT, async () => {
+  console.log(`🚀  Server running on port ${config.PORT}`);
   console.log(`🌐 Frontend URL: ${config.FRONTEND_URL}`);
   console.log(`🔒 Environment: ${config.NODE_ENV}`);
+
+  // Initialize job boards in database
+  await initializeJobBoards();
 });

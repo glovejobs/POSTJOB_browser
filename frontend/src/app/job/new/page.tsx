@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Sparkles, PenLine, Zap } from 'lucide-react';
 import { BRAND_CONFIG } from '../../../../../shared/constants';
+import DashboardLayout from '@/components/DashboardLayout';
 
 export default function NewJobPage() {
   const router = useRouter();
@@ -12,10 +13,7 @@ export default function NewJobPage() {
   const [isClosing, setIsClosing] = useState(false);
 
   const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      router.push('/dashboard?tab=jobs');
-    }, 200);
+    router.push('/my-jobs');
   };
 
   const handleWriteManually = () => {
@@ -35,32 +33,13 @@ export default function NewJobPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ fontFamily: typography.fontFamily.primary }}>
-      {/* Backdrop */}
-      <div
-        className={`absolute inset-0 bg-black transition-opacity duration-200 ${isClosing ? 'opacity-0' : 'opacity-50'}`}
-        onClick={handleClose}
-      />
+    <DashboardLayout title="Create New Job">
+      <div className="min-h-screen bg-gray-50 p-6" style={{ fontFamily: typography.fontFamily.primary }}>
+        <div className="max-w-2xl mx-auto">
+          {/* Card Container */}
+          <div className="bg-white rounded-xl shadow-sm p-8">
 
-      {/* Modal */}
-      <div
-        className={`relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 transform transition-all duration-200 ${
-          isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
-        }`}
-        style={{ maxHeight: '90vh' }}
-      >
-        {/* Close Button */}
-        <button
-          onClick={handleClose}
-          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-          style={{ color: colors.textSecondary }}
-        >
-          <X size={20} />
-        </button>
-
-        {/* Modal Content */}
-        <div className="p-8">
-          {/* Header */}
+            {/* Header */}
           <div className="text-center mb-6">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
                  style={{
@@ -147,12 +126,13 @@ export default function NewJobPage() {
             </button>
           </div>
 
-          {/* Helper Text */}
-          <p className="text-center text-sm mt-6" style={{ color: colors.textSecondary }}>
-            You can always edit your job post later
-          </p>
+            {/* Helper Text */}
+            <p className="text-center text-sm mt-6" style={{ color: colors.textSecondary }}>
+              You can always edit your job post later
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

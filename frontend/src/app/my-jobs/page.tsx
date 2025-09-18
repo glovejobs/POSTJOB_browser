@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { BRAND_CONFIG } from '../../../../shared/constants';
-import MyJobs from '@/components/MyJobs';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import MyJobsTable from '@/components/MyJobsTable';
+import DashboardLayout from '@/components/DashboardLayout';
 import { Job } from '../../../../shared/types';
 import { useApi } from '@/hooks/useApi';
 import { PageLoader } from '@/components/ui/Loader';
@@ -13,10 +12,22 @@ import { PageLoader } from '@/components/ui/Loader';
 export default function MyJobsPage() {
   const router = useRouter();
   const { colors, typography, shadows } = BRAND_CONFIG;
+  const [hasApiKey, setHasApiKey] = useState(false);
+
+  // Check for API key on mount
+  useEffect(() => {
+    const apiKey = localStorage.getItem('api_key');
+    if (!apiKey) {
+      router.push('/login');
+    } else {
+      setHasApiKey(true);
+    }
+  }, [router]);
 
   // Use optimized API hook with explicit immediate flag
+  // Only make request if we have an API key
   const { data: userJobs, loading, error, refetch } = useApi<Job[]>(
-    '/api/jobs',
+    hasApiKey ? '/api/jobs' : null,
     {
       immediate: true,
       cache: false, // Disable cache for fresh data
@@ -28,70 +39,48 @@ export default function MyJobsPage() {
   // Fallback empty array if data is null
   const jobs = userJobs || [];
 
-  if (loading && !userJobs) {
-    return <PageLoader text="Loading your jobs..." />;
-  }
-
-  // Handle error state
-  if (error && !userJobs) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: colors.surface }}>
-        <div className="text-center">
-          <p className="text-lg mb-4" style={{ color: colors.error }}>
-            Failed to load jobs
-          </p>
-          <button
-            onClick={() => refetch()}
-            className="px-6 py-2 rounded-lg text-white"
-            style={{ backgroundColor: colors.primary }}
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+  // Always render the layout to keep sidebar/header stable
   return (
-    <div className="min-h-screen" style={{ backgroundColor: colors.surface, fontFamily: typography.fontFamily.primary }}>
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b px-6 py-4"
-              style={{ borderColor: colors.border, backgroundColor: colors.background }}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/dashboard"
-              className="p-2 rounded-lg hover:bg-gray-50 transition-colors"
-              style={{ color: colors.textPrimary }}
-            >
-              <ArrowLeft size={20} />
-            </Link>
-            <h1 className="text-2xl font-semibold" style={{ color: colors.textPrimary }}>
-              My Jobs
-            </h1>
+    <DashboardLayout>
+      <div className="p-6 bg-gray-50 min-h-screen">
+        {/* Show loading state only in content area */}
+        {!hasApiKey || (loading && !userJobs) ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 animate-spin mx-auto rounded-full"></div>
+              <p className="text-xs text-gray-500 mt-2">Loading your jobs...</p>
+            </div>
           </div>
-
-          <Link
-            href="/job/new"
-            className="px-4 py-2 rounded-lg text-white"
-            style={{
-              background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)`,
-              boxShadow: shadows.sm
+        ) : error && !userJobs ? (
+          // Error state in content area
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <p className="text-lg mb-4 text-red-600">
+                Failed to load jobs
+              </p>
+              <button
+                onClick={() => refetch()}
+                className="px-6 py-2 rounded-lg text-white"
+                style={{ backgroundColor: colors.primary }}
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        ) : (
+          // Jobs content
+          <MyJobsTable
+            initialJobs={jobs}
+            onJobClick={(job) => router.push(`/job/${job.id}`)}
+            onPostNewJob={() => router.push('/job/new')}
+            onEditJob={(job) => router.push(`/job/${job.id}/edit`)}
+            onDeleteJob={async (jobId) => {
+              // Add delete functionality here
+              console.log('Delete job:', jobId);
             }}
-          >
-            Post New Job
-          </Link>
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="max-w-7xl mx-auto p-6">
-        <MyJobs
-          initialJobs={jobs}
-          onJobClick={(job) => router.push(`/job/${job.id}`)}
-          onPostNewJob={() => router.push('/job/new')}
-        />
-      </main>
-    </div>
+          />
+        )}
+      </div>
+    </DashboardLayout>
   );
 }

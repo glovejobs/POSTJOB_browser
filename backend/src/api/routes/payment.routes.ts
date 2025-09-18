@@ -1,12 +1,11 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { authenticate, AuthRequest } from '../../middleware/auth.middleware';
-import { paymentService } from '../../services/payment.service';
 import { config } from '../../config/environment';
-import { PrismaClient } from '@prisma/client';
+import db from '../../services/database.service';
+import supabase from '../../database/supabase';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Initialize Stripe
 const stripe = new Stripe(config.STRIPE_SECRET_KEY || 'sk_test_dummy', {
@@ -24,43 +23,45 @@ router.post('/create-checkout', authenticate, async (req: AuthRequest, res) => {
     }
 
     // Verify job ownership
-    const job = await prisma.job.findFirst({
-      where: { id: jobId, userId }
-    });
-
-    if (!job) {
+    const job = await db.job.findById(jobId);
+    if (!job || job.user_id !== userId) {
       return res.status(404).json({ error: 'Job not found' });
     }
 
+    // Calculate price
+    const pricePerJob = config.STRIPE_PRICE_PER_JOB || 299; // in cents
+
     // Create checkout session
-    const session = await paymentService.createCheckoutSession({
-      jobId,
-      userId,
-      boardCount: boardIds.length,
-      successUrl: `${config.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${config.FRONTEND_URL}/job/${jobId}`
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Job Posting - ${job.title}`,
+            description: `Posting to ${boardIds.length} job board(s)`
+          },
+          unit_amount: pricePerJob
+        },
+        quantity: boardIds.length
+      }],
+      mode: 'payment',
+      metadata: {
+        jobId,
+        userId,
+        boardCount: boardIds.length.toString()
+      },
+      success_url: `${config.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${config.FRONTEND_URL}/job/${jobId}`
     });
 
     // Store selected boards for later processing
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        status: 'payment_pending'
-      }
+    await db.job.update(jobId, {
+      status: 'payment_pending'
     });
 
     // Create pending job postings
-    await Promise.all(
-      boardIds.map(boardId =>
-        prisma.jobPosting.create({
-          data: {
-            jobId,
-            boardId,
-            status: 'pending'
-          }
-        })
-      )
-    );
+    await db.jobPosting.createMany(jobId, boardIds);
 
     return res.json({
       sessionId: session.id,
@@ -83,18 +84,21 @@ router.post('/create-intent', authenticate, async (req: AuthRequest, res) => {
     }
 
     // Verify job ownership
-    const job = await prisma.job.findFirst({
-      where: { id: jobId, userId }
-    });
-
-    if (!job) {
+    const job = await db.job.findById(jobId);
+    if (!job || job.user_id !== userId) {
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    const paymentIntent = await paymentService.createPaymentIntent({
-      jobId,
-      userId,
-      boardCount
+    // Create payment intent
+    const amount = (config.STRIPE_PRICE_PER_JOB || 299) * boardCount;
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'usd',
+      metadata: {
+        jobId,
+        userId,
+        boardCount: boardCount.toString()
+      }
     });
 
     return res.json({
@@ -121,11 +125,8 @@ router.get('/session/:sessionId', authenticate, async (req: AuthRequest, res) =>
     // Verify user owns the job
     const jobId = session.metadata?.jobId;
     if (jobId) {
-      const job = await prisma.job.findFirst({
-        where: { id: jobId, userId: req.user!.id }
-      });
-
-      if (!job) {
+      const job = await db.job.findById(jobId);
+      if (!job || job.user_id !== req.user!.id) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
     }
@@ -151,7 +152,9 @@ router.post('/confirm', authenticate, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Payment intent ID is required' });
     }
 
-    const success = await paymentService.confirmPayment(paymentIntentId);
+    // Retrieve payment intent to verify
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const success = paymentIntent.status === 'succeeded';
 
     if (success) {
       return res.json({ success: true, message: 'Payment confirmed' });
@@ -168,7 +171,16 @@ router.post('/confirm', authenticate, async (req: AuthRequest, res) => {
 router.get('/history', authenticate, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
-    const payments = await paymentService.getPaymentHistory(userId);
+    // Get all jobs with payment info for this user
+    const jobs = await db.job.findByUser(userId);
+    const payments = jobs.filter((job: any) => job.payment_intent_id).map((job: any) => ({
+      id: job.payment_intent_id,
+      jobId: job.id,
+      jobTitle: job.title,
+      amount: (config.STRIPE_PRICE_PER_JOB || 299),
+      status: job.payment_status,
+      createdAt: job.created_at
+    }));
 
     return res.json(payments);
   } catch (error) {
@@ -184,18 +196,35 @@ router.get('/invoice/:paymentId', authenticate, async (req: AuthRequest, res) =>
     const userId = req.user!.id;
 
     // Verify user owns this payment
-    const job = await prisma.job.findFirst({
-      where: {
-        paymentIntentId: paymentId,
-        userId
-      }
-    });
+    // We need to find by payment intent ID, which requires a Supabase query
+    const { data: jobs } = await supabase
+      .from('postjob_jobs')
+      .select('*')
+      .eq('payment_intent_id', paymentId)
+      .eq('user_id', userId)
+      .limit(1);
+
+    const job = jobs?.[0];
 
     if (!job) {
       return res.status(404).json({ error: 'Payment not found' });
     }
 
-    const invoice = await paymentService.generateInvoice(paymentId);
+    // Generate simple HTML invoice
+    const invoice = `
+      <!DOCTYPE html>
+      <html>
+      <head><title>Invoice</title></head>
+      <body>
+        <h1>Invoice</h1>
+        <p>Job: ${job.title}</p>
+        <p>Company: ${job.company}</p>
+        <p>Amount: $${((config.STRIPE_PRICE_PER_JOB || 299) / 100).toFixed(2)}</p>
+        <p>Payment ID: ${paymentId}</p>
+        <p>Date: ${new Date(job.created_at).toLocaleDateString()}</p>
+      </body>
+      </html>
+    `;
 
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Content-Disposition', `attachment; filename="invoice-${paymentId.substring(0, 8)}.html"`);

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Check, ChevronRight, School, DollarSign } from 'lucide-react';
+import { Check, ChevronRight, School, DollarSign } from 'lucide-react';
 import { BRAND_CONFIG } from '../../../../../../shared/constants';
 import { jobs } from '@/lib/api';
+import DashboardLayout from '@/components/DashboardLayout';
 
 const UNIVERSITY_BOARDS = [
   { id: 'harvard', name: 'Harvard University', logo: '🎓', students: '23,000+', location: 'Cambridge, MA' },
@@ -85,47 +86,37 @@ export default function BoardSelectionPage() {
   const totalCost = selectedBoards.length * 2.99;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: colors.surface, fontFamily: typography.fontFamily.primary }}>
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b px-6 py-4"
-              style={{ borderColor: colors.border }}>
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push(`/job/${jobId}`)}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              style={{ color: colors.textSecondary }}
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div>
-              <h1 className="text-2xl font-semibold" style={{ color: colors.textPrimary }}>
-                Select Job Boards
-              </h1>
-              <p className="text-sm" style={{ color: colors.textSecondary }}>
-                Choose where to post your job listing
-              </p>
+    <DashboardLayout title="Select Job Boards">
+      <div className="min-h-screen bg-gray-50 flex flex-col" style={{ fontFamily: typography.fontFamily.primary }}>
+        <div className="flex-1 p-6">
+          <div className="max-w-5xl mx-auto">
+          {/* Header Card */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold mb-2" style={{ color: colors.textPrimary }}>
+                  Select Job Boards
+                </h1>
+                <p className="text-sm" style={{ color: colors.textSecondary }}>
+                  Choose where to post your job listing
+                </p>
+              </div>
+
+              {/* Price Display */}
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg"
+                   style={{ backgroundColor: colors.primaryLight + '10' }}>
+                <DollarSign size={20} style={{ color: colors.primary }} />
+                <div>
+                  <p className="text-sm font-medium" style={{ color: colors.primary }}>
+                    ${totalCost.toFixed(2)} total
+                  </p>
+                  <p className="text-xs" style={{ color: colors.textSecondary }}>
+                    $2.99 per board
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Price Display */}
-          <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg"
-               style={{ backgroundColor: colors.primaryLight + '10' }}>
-            <DollarSign size={20} style={{ color: colors.primary }} />
-            <div>
-              <p className="text-sm font-medium" style={{ color: colors.primary }}>
-                ${totalCost.toFixed(2)} total
-              </p>
-              <p className="text-xs" style={{ color: colors.textSecondary }}>
-                $2.99 per board
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="max-w-5xl mx-auto p-6">
         {/* Job Summary */}
         {jobDetails && (
           <div className="card mb-6">
@@ -260,32 +251,44 @@ export default function BoardSelectionPage() {
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-between mt-8">
-          <button
-            onClick={() => router.push(`/job/${jobId}`)}
-            className="px-6 py-3 rounded-lg border font-medium transition-colors hover:bg-gray-50"
-            style={{ borderColor: colors.border, color: colors.textSecondary }}
-          >
-            Back to Job Details
-          </button>
-
-          <button
-            onClick={handleContinue}
-            disabled={selectedBoards.length === 0 || loading}
-            className="px-8 py-3 rounded-lg font-medium text-white transition-all transform hover:scale-105 flex items-center gap-2"
-            style={{
-              background: selectedBoards.length > 0
-                ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)`
-                : colors.lightGray,
-              cursor: selectedBoards.length === 0 ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {loading ? 'Processing...' : 'Continue to Payment'}
-            <ChevronRight size={18} />
-          </button>
+          </div>
         </div>
-      </main>
-    </div>
+
+        {/* Sticky Action Buttons */}
+        <div className="sticky bottom-0 bg-white border-t shadow-lg" style={{ borderColor: colors.border }}>
+          <div className="max-w-5xl mx-auto p-6">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => router.push(`/job/${jobId}`)}
+                className="px-6 py-3 border font-medium transition-colors hover:bg-gray-50"
+                style={{
+                  borderColor: colors.border,
+                  color: colors.textSecondary,
+                  borderRadius: BRAND_CONFIG.borderRadius.button
+                }}
+              >
+                Back to Job Details
+              </button>
+
+              <button
+                onClick={handleContinue}
+                disabled={selectedBoards.length === 0 || loading}
+                className="px-8 py-3 font-medium text-white transition-all transform hover:scale-105 flex items-center gap-2"
+                style={{
+                  background: selectedBoards.length > 0
+                    ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)`
+                    : colors.lightGray,
+                  cursor: selectedBoards.length === 0 ? 'not-allowed' : 'pointer',
+                  borderRadius: BRAND_CONFIG.borderRadius.button
+                }}
+              >
+                {loading ? 'Processing...' : 'Continue to Payment'}
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </DashboardLayout>
   );
 }

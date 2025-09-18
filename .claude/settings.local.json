@@ -39,7 +39,8 @@
       "mcp__supabase__execute_sql",
       "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"go ahead and remember we are using supabase db and you have access to mcp\" npx prisma migrate reset --force)",
       "Bash(curl:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []

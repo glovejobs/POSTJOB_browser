@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
-import prisma from '../../database/prisma';
+import db from '../../services/database.service';
 import { authenticate, AuthRequest } from '../../middleware/auth.middleware';
 import { addJobToQueue } from '../../queue/job.queue';
 import { CreateJobRequest, JobStatusResponse } from '../../types';
 import { config } from '../../config/environment';
 import { emailService } from '../../services/email.service';
+import { getBoardUUID } from '../../config/boards.config';
 
 const router = Router();
 const isStripeEnabled = config.STRIPE_SECRET_KEY && !config.STRIPE_SECRET_KEY.includes('test_123');
@@ -31,28 +32,24 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
       }
     }
     
-    // Create job in database first (as draft)
-    const job = await prisma.job.create({
-      data: {
-        userId,
-        title: jobData.title,
-        description: jobData.description,
-        location: jobData.location,
-        salaryMin: jobData.salary_min,
-        salaryMax: jobData.salary_max,
-        company: jobData.company,
-        contactEmail: jobData.contact_email,
-        employmentType: jobData.employment_type || 'full-time',
-        department: jobData.department,
-        status: 'draft' // Start as draft until boards are selected
-      }
+    // Create job in database first (as pending)
+    const job = await db.job.create({
+      userId,
+      title: jobData.title,
+      description: jobData.description,
+      location: jobData.location,
+      salaryMin: jobData.salary_min,
+      salaryMax: jobData.salary_max,
+      company: jobData.company,
+      contactEmail: jobData.contact_email,
+      employmentType: jobData.employment_type || 'full-time',
+      department: jobData.department,
+      status: 'pending' // Start as pending until boards are selected
     });
 
     // Send email notification
     try {
-      const user = await prisma.user.findUnique({
-        where: { id: userId }
-      });
+      const user = await db.user.findById(userId);
 
       if (user?.email) {
         await emailService.sendJobCreatedEmail(user.email, {
@@ -84,23 +81,12 @@ router.get('/:id/status', authenticate, async (req: AuthRequest, res) => {
     const userId = req.user!.id;
     
     // Get job with postings
-    const job = await prisma.job.findFirst({
-      where: {
-        id: jobId,
-        userId
-      },
-      include: {
-        postings: {
-          include: {
-            board: {
-              select: {
-                name: true
-              }
-            }
-          }
-        }
-      }
-    });
+    // Check job ownership and get job with postings
+    const job = await db.job.findById(jobId, true);
+
+    if (!job || job.user_id !== userId) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
     
     if (!job) {
       return res.status(404).json({ error: 'Job not found' });
@@ -110,11 +96,11 @@ router.get('/:id/status', authenticate, async (req: AuthRequest, res) => {
       job_id: job.id,
       overall_status: job.status as any,
       postings: job.postings.map((posting: any) => ({
-        board_id: posting.boardId,
+        board_id: posting.board_id,
         board_name: posting.board.name,
         status: posting.status as any,
-        external_url: posting.externalUrl || undefined,
-        error_message: posting.errorMessage || undefined
+        external_url: posting.external_url || undefined,
+        error_message: posting.error_message || undefined
       }))
     };
     
@@ -131,38 +117,23 @@ router.post('/:id/publish', authenticate, async (req: AuthRequest, res) => {
     const jobId = req.params.id;
     const { boardIds } = req.body;
     const userId = req.user!.id;
-    
+
     // Verify job belongs to user
-    const job = await prisma.job.findFirst({
-      where: {
-        id: jobId,
-        userId
-      }
-    });
-    
-    if (!job) {
+    const job = await db.job.findById(jobId);
+
+    if (!job || job.user_id !== userId) {
       return res.status(404).json({ error: 'Job not found' });
     }
-    
+
     if (!boardIds || !Array.isArray(boardIds) || boardIds.length === 0) {
       return res.status(400).json({ error: 'Board IDs are required' });
     }
-    
+
     // Create job postings for each board
-    await prisma.jobPosting.createMany({
-      data: boardIds.map(boardId => ({
-        jobId: job.id,
-        boardId,
-        status: 'pending'
-      })),
-      skipDuplicates: true
-    });
-    
+    await db.jobPosting.createMany(job.id, boardIds);
+
     // Update job status
-    await prisma.job.update({
-      where: { id: jobId },
-      data: { status: 'payment_pending' }
-    });
+    await db.job.update(jobId, { status: 'payment_pending' });
     
     // Calculate total price based on board count
     const pricePerJob = config.STRIPE_PRICE_PER_JOB || 299; // $2.99 in cents
@@ -191,12 +162,9 @@ router.post('/:id/publish', authenticate, async (req: AuthRequest, res) => {
     }
     
     // Update job with payment intent ID
-    await prisma.job.update({
-      where: { id: jobId },
-      data: { 
-        paymentIntentId: paymentIntent.id,
-        paymentStatus: 'pending'
-      }
+    await db.job.update(jobId, {
+      paymentIntentId: paymentIntent.id,
+      paymentStatus: 'pending'
     });
     
     return res.status(201).json({
@@ -218,16 +186,11 @@ router.post('/:id/confirm-payment', authenticate, async (req: AuthRequest, res) 
     const jobId = req.params.id;
     const { payment_intent_id } = req.body;
     const userId = req.user!.id;
-    
+
     // Verify job belongs to user
-    const job = await prisma.job.findFirst({
-      where: {
-        id: jobId,
-        userId
-      }
-    });
-    
-    if (!job) {
+    const job = await db.job.findById(jobId);
+
+    if (!job || job.user_id !== userId) {
       return res.status(404).json({ error: 'Job not found' });
     }
     
@@ -249,10 +212,7 @@ router.post('/:id/confirm-payment', authenticate, async (req: AuthRequest, res) 
     }
     
     // Update job status
-    await prisma.job.update({
-      where: { id: jobId },
-      data: { status: 'posting' }
-    });
+    await db.job.update(jobId, { status: 'posting' });
     
     // Add job to queue for processing
     await addJobToQueue(jobId);
@@ -268,20 +228,22 @@ router.post('/:id/confirm-payment', authenticate, async (req: AuthRequest, res) 
 router.get('/', authenticate, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
-    
-    const jobs = await prisma.job.findMany({
-      where: { userId },
-      include: {
-        _count: {
-          select: {
-            postings: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-    
-    res.json(jobs);
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+
+    const jobs = await db.job.findByUser(userId, limit);
+
+    // Transform to match dashboard expectations
+    const transformedJobs = jobs.map(job => ({
+      id: job.id,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      status: job.status,
+      createdAt: job.created_at,
+      applicationCount: job.applicationCount || 0
+    }));
+
+    res.json(transformedJobs);
   } catch (error) {
     console.error('Error fetching jobs:', error);
     res.status(500).json({ error: 'Failed to fetch jobs' });
@@ -294,26 +256,18 @@ router.get('/:id/payment-intent', authenticate, async (req: AuthRequest, res): P
     const jobId = req.params.id;
     const userId = req.user!.id;
 
-    const job = await prisma.job.findFirst({
-      where: {
-        id: jobId,
-        userId
-      },
-      include: {
-        postings: true
-      }
-    });
+    const job = await db.job.findById(jobId, true);
 
-    if (!job) {
+    if (!job || job.user_id !== userId) {
       return res.status(404).json({ error: 'Job not found' });
     }
 
     // Check if payment intent already exists
-    if (job.paymentIntentId) {
+    if (job.payment_intent_id) {
       return res.json({
         paymentIntent: {
-          id: job.paymentIntentId,
-          client_secret: `${job.paymentIntentId}_secret`
+          id: job.payment_intent_id,
+          client_secret: `${job.payment_intent_id}_secret`
         }
       });
     }
@@ -330,7 +284,7 @@ router.get('/:id/payment-intent', authenticate, async (req: AuthRequest, res): P
           userId,
           jobId: job.id,
           jobTitle: job.title,
-          boardCount: job.postings.length.toString()
+          boardCount: (job.postings || []).length.toString()
         }
       });
     } else {
@@ -342,11 +296,8 @@ router.get('/:id/payment-intent', authenticate, async (req: AuthRequest, res): P
     }
 
     // Update job with payment intent ID
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        paymentIntentId: paymentIntent.id
-      }
+    await db.job.update(jobId, {
+      paymentIntentId: paymentIntent.id
     });
 
     return res.json({
@@ -367,21 +318,9 @@ router.get('/:id', authenticate, async (req: AuthRequest, res): Promise<any> => 
     const jobId = req.params.id;
     const userId = req.user!.id;
 
-    const job = await prisma.job.findFirst({
-      where: {
-        id: jobId,
-        userId
-      },
-      include: {
-        postings: {
-          include: {
-            board: true
-          }
-        }
-      }
-    });
+    const job = await db.job.findById(jobId, true);
 
-    if (!job) {
+    if (!job || job.user_id !== userId) {
       return res.status(404).json({ error: 'Job not found' });
     }
 
@@ -400,41 +339,47 @@ router.put('/:id', authenticate, async (req: AuthRequest, res): Promise<any> => 
     const updates = req.body;
 
     // Verify job belongs to user
-    const job = await prisma.job.findFirst({
-      where: {
-        id: jobId,
-        userId
-      }
-    });
+    const job = await db.job.findById(jobId);
 
-    if (!job) {
+    if (!job || job.user_id !== userId) {
       return res.status(404).json({ error: 'Job not found' });
     }
 
     // Handle board selection updates
     if (updates.postings && Array.isArray(updates.postings)) {
       // Delete existing postings
-      await prisma.jobPosting.deleteMany({
-        where: { jobId }
-      });
+      await db.jobPosting.deleteByJob(jobId);
 
       // Create new postings
       if (updates.postings.length > 0) {
-        await prisma.jobPosting.createMany({
-          data: updates.postings.map((posting: any) => ({
-            jobId,
-            boardId: posting.board_id || posting.boardId,
-            status: posting.status || 'pending'
-          })),
-          skipDuplicates: true
-        });
+        // Map board codes to UUIDs
+        const validBoardIds = [];
+        for (const posting of updates.postings) {
+          const boardCode = posting.board_id || posting.boardId;
+
+          // Check if it's already a UUID
+          const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(boardCode);
+
+          if (isUUID) {
+            validBoardIds.push(boardCode);
+          } else {
+            // Try to get UUID from board code
+            const boardUUID = getBoardUUID(boardCode);
+            if (boardUUID) {
+              validBoardIds.push(boardUUID);
+            } else {
+              console.warn(`Unknown board code: ${boardCode}`);
+            }
+          }
+        }
+
+        if (validBoardIds.length > 0) {
+          await db.jobPosting.createMany(jobId, validBoardIds);
+        }
       }
 
       // Update job status to payment_pending if boards are selected
-      await prisma.job.update({
-        where: { id: jobId },
-        data: { status: 'payment_pending' }
-      });
+      await db.job.update(jobId, { status: 'payment_pending' });
     }
 
     // Update other job fields if provided
@@ -449,23 +394,11 @@ router.put('/:id', authenticate, async (req: AuthRequest, res): Promise<any> => 
     }
 
     if (Object.keys(updateData).length > 0) {
-      await prisma.job.update({
-        where: { id: jobId },
-        data: updateData
-      });
+      await db.job.update(jobId, updateData);
     }
 
     // Return updated job
-    const updatedJob = await prisma.job.findFirst({
-      where: { id: jobId },
-      include: {
-        postings: {
-          include: {
-            board: true
-          }
-        }
-      }
-    });
+    const updatedJob = await db.job.findById(jobId, true);
 
     return res.json(updatedJob);
   } catch (error) {

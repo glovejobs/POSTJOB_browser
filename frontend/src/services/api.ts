@@ -26,7 +26,10 @@ class ApiService {
       (config) => {
         const apiKey = this.getApiKey();
         if (apiKey) {
-          config.headers['X-API-Key'] = apiKey;
+          config.headers['x-api-key'] = apiKey;
+        } else {
+          // Log when API key is missing for debugging
+          console.warn('API request made without API key:', config.url);
         }
         return config;
       },
@@ -37,13 +40,22 @@ class ApiService {
     this.client.interceptors.response.use(
       (response) => response,
       async (error) => {
-        // Only logout on 401 if it's an authentication error, not other API issues
-        if (error.response?.status === 401 && error.config?.url?.includes('/api/auth')) {
-          // Clear auth and redirect only for auth endpoints
-          this.clearApiKey();
-          window.location.href = '/login';
+        // Check if error is due to missing API key
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          const apiKey = this.getApiKey();
+          if (!apiKey) {
+            console.error('API request failed: No API key found');
+            // Only redirect to login if not already there
+            if (!window.location.pathname.includes('/login')) {
+              window.location.href = '/login';
+            }
+          } else if (error.config?.url?.includes('/api/auth')) {
+            // Clear auth and redirect only for auth endpoints
+            this.clearApiKey();
+            window.location.href = '/login';
+          }
         }
-        // Don't logout for other 401s (might be temporary API issues)
+        // Don't logout for other errors (might be temporary API issues)
         return Promise.reject(error);
       }
     );

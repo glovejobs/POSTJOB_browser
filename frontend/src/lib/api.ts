@@ -316,8 +316,12 @@ export const jobs = {
     const { data } = await api.put(`/api/jobs/${id}`, updates);
 
     // Also update in Supabase for real-time sync
+    // Filter out fields that don't exist in the postjob_jobs table
     try {
-      await db.jobs.update(id, updates);
+      const { postings, ...jobUpdates } = updates;
+      if (Object.keys(jobUpdates).length > 0) {
+        await db.jobs.update(id, jobUpdates);
+      }
     } catch (supabaseError) {
       console.error('Supabase job update failed:', supabaseError);
     }

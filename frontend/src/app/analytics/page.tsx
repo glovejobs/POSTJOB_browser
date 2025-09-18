@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,7 +11,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import {
-  ArrowLeft, Download, TrendingUp, TrendingDown, Users,
+  Download, TrendingUp, TrendingDown, Users,
   Briefcase, Target, Award, Calendar, BarChart2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -151,21 +152,12 @@ export default function AnalyticsPage() {
   })) : [];
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <Button
-        onClick={() => router.push('/dashboard')}
-        variant="ghost"
-        className="mb-4"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Dashboard
-      </Button>
-
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Analytics & Insights</h1>
-          <p className="text-gray-600">Track your job posting performance and applicant metrics</p>
-        </div>
+    <DashboardLayout title="Analytics & Insights">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <p className="text-gray-600">Track your job posting performance and applicant metrics</p>
+          </div>
         <div className="flex gap-2">
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
             <SelectTrigger className="w-[120px]">
@@ -373,5 +365,6 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
     </div>
+    </DashboardLayout>
   );
 }

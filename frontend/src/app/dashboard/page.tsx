@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import DashboardLayout from '@/components/DashboardLayout';
 import {
   HomeIcon,
   BriefcaseIcon,
@@ -164,16 +165,7 @@ export default function Dashboard() {
     },
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 animate-spin mx-auto" style={{ borderRadius: BRAND_CONFIG.borderRadius.full }}></div>
-          <p className="text-xs text-gray-500 mt-2">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  // Always render layout to keep sidebar/header stable
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -186,7 +178,8 @@ export default function Dashboard() {
           )}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-1 hover:bg-gray-100 rounded text-gray-500"
+            className="p-1 hover:bg-gray-100 text-gray-500"
+            style={{ borderRadius: BRAND_CONFIG.borderRadius.sm }}
           >
             <ChevronRightIcon className={`h-3.5 w-3.5 transition-transform ${sidebarCollapsed ? '' : 'rotate-180'}`} />
           </button>
@@ -284,6 +277,15 @@ export default function Dashboard() {
 
         {/* Page content */}
         <main className="flex-1 p-4">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 animate-spin mx-auto rounded-full"></div>
+                <p className="text-xs text-gray-500 mt-2">Loading dashboard...</p>
+              </div>
+            </div>
+          ) : (
+            <>
           {/* Page header */}
           <div className="mb-4">
             <div className="flex items-center justify-between">
@@ -391,7 +393,7 @@ export default function Dashboard() {
                           </div>
                           <div className="flex items-center gap-2">
                             {job.applicationCount > 0 && (
-                              <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-xxs font-medium rounded">
+                              <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-xxs font-medium" style={{ borderRadius: BRAND_CONFIG.borderRadius.sm }}>
                                 {job.applicationCount} apps
                               </span>
                             )}
@@ -457,6 +459,8 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          </>
+          )}
         </main>
       </div>
     </div>

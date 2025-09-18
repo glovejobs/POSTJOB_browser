@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis';
-import prisma from '../database/prisma';
+import db from '../services/database.service';
 import { postingService } from '../services/posting.service';
 import { io } from '../index';
 
@@ -28,17 +28,30 @@ class SimpleQueue {
     const job = this.jobs.shift();
 
     try {
+      // Add delay before first attempt to ensure system is ready
+      if (job.attempts === 0) {
+        console.log(`⏳ Preparing to process job ${job.id}...`);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+
       await processJob(job.data);
-      console.log(`Job ${job.id} completed`);
-    } catch (error) {
-      console.error(`Job ${job.id} failed:`, error);
+      console.log(`✅ Job ${job.id} completed successfully`);
+    } catch (error: any) {
       job.attempts++;
+      console.error(`❌ Job ${job.id} failed (attempt ${job.attempts}/${job.maxAttempts}):`, error.message);
+
       if (job.attempts < job.maxAttempts) {
-        // Retry with backoff
+        // Calculate backoff delay: 3s, 6s, 12s
+        const delay = Math.pow(2, job.attempts) * 3000;
+        console.log(`🔄 Retrying job ${job.id} in ${delay / 1000} seconds...`);
+
+        // Retry with exponential backoff
         setTimeout(() => {
           this.jobs.push(job);
           this.process();
-        }, Math.pow(2, job.attempts) * 1000);
+        }, delay);
+      } else {
+        console.error(`💀 Job ${job.id} failed permanently after ${job.maxAttempts} attempts`);
       }
     }
 
@@ -59,17 +72,15 @@ async function processJob(data: { jobId: string }) {
 
   try {
     // Get job details
-    const jobData = await prisma.postjob_jobs.findUnique({
-      where: { id: jobId },
-      include: {
-        job_postings: {
-          where: { status: 'pending' },
-          include: {
-            job_boards: true
-          }
-        }
-      }
-    });
+    const jobData = await db.job.findById(jobId, true);
+    if (!jobData) {
+      throw new Error('Job not found');
+    }
+
+    // Filter pending postings
+    const pendingPostings = (jobData.postings || []).filter(
+      (p: any) => p.status === 'pending'
+    );
 
     if (!jobData) {
       throw new Error('Job not found');
@@ -78,7 +89,7 @@ async function processJob(data: { jobId: string }) {
     // Send initial update
     io.to(`job-${jobId}`).emit('job-start', {
       job_id: jobId,
-      total_boards: jobData.job_postings.length,
+      total_boards: pendingPostings.length,
       status: 'posting'
     });
 
@@ -88,8 +99,8 @@ async function processJob(data: { jobId: string }) {
 
       // Send updates for each result
       for (const result of results) {
-        const posting = jobData.job_postings.find(
-          (p: any) => p.job_boards.name.toLowerCase() === result.boardName.toLowerCase()
+        const posting = pendingPostings.find(
+          (p: any) => p.board?.name?.toLowerCase() === result.boardName.toLowerCase()
         );
 
         if (posting) {
@@ -119,17 +130,12 @@ async function processJob(data: { jobId: string }) {
       console.error(`Error processing job ${jobId}:`, error);
 
       // Update all pending postings as failed
-      await prisma.job_postings.updateMany({
-        where: {
-          job_id: jobId,
-          status: 'pending'
-        },
-        data: {
+      for (const posting of pendingPostings) {
+        await db.jobPosting.update(posting.id, {
           status: 'failed',
-          error_message: error instanceof Error ? error.message : 'Unknown error',
-          updated_at: new Date()
-        }
-      });
+          errorMessage: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
 
       // Send error update
       io.to(`job-${jobId}`).emit('job-error', {
@@ -144,10 +150,7 @@ async function processJob(data: { jobId: string }) {
     console.error('Job processing error:', error);
 
     // Update job as failed
-    await prisma.postjob_jobs.update({
-      where: { id: jobId },
-      data: { status: 'failed' }
-    });
+    await db.job.update(jobId, { status: 'failed' });
 
     throw error;
   }

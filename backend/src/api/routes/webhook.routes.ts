@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import express from 'express';
 import Stripe from 'stripe';
 import { addJobToQueue } from '../../queue/job.queue';
-import prisma from '../../database/prisma';
+import db from '../../services/database.service';
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -39,10 +39,7 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req: Re
       // You could automatically queue the job here if you store jobId in metadata
       if (paymentIntent.metadata.jobId) {
         try {
-          await prisma.job.update({
-            where: { id: paymentIntent.metadata.jobId },
-            data: { status: 'posting' }
-          });
+          await db.job.update(paymentIntent.metadata.jobId, { status: 'posting' });
           await addJobToQueue(paymentIntent.metadata.jobId);
         } catch (error) {
           console.error('Error processing payment success:', error);

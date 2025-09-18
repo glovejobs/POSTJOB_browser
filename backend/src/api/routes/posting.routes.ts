@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../../middleware/auth.middleware';
 import { addJobToQueue } from '../../queue/job.queue';
+import db from '../../services/database.service';
+import supabase from '../../database/supabase';
 import path from 'path';
 import fs from 'fs/promises';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // POST /api/posting/start - Start job posting process
 router.post('/start', authenticate, async (req: AuthRequest, res) => {
@@ -19,11 +19,8 @@ router.post('/start', authenticate, async (req: AuthRequest, res) => {
     }
 
     // Verify job ownership
-    const job = await prisma.job.findFirst({
-      where: { id: jobId, userId }
-    });
-
-    if (!job) {
+    const job = await db.job.findById(jobId);
+    if (!job || job.user_id !== userId) {
       return res.status(404).json({ error: 'Job not found' });
     }
 
@@ -33,23 +30,10 @@ router.post('/start', authenticate, async (req: AuthRequest, res) => {
     }
 
     // Create job postings for each selected board
-    const postings = await Promise.all(
-      boardIds.map(boardId =>
-        prisma.jobPosting.create({
-          data: {
-            jobId,
-            boardId,
-            status: 'pending'
-          }
-        })
-      )
-    );
+    await db.jobPosting.createMany(jobId, boardIds);
 
     // Update job status
-    await prisma.job.update({
-      where: { id: jobId },
-      data: { status: 'posting' }
-    });
+    await db.job.update(jobId, { status: 'posting' });
 
     // Add to queue for processing
     await addJobToQueue(jobId);
@@ -57,7 +41,7 @@ router.post('/start', authenticate, async (req: AuthRequest, res) => {
     return res.json({
       message: 'Job posting started',
       jobId,
-      postings: postings.length
+      postings: boardIds.length
     });
   } catch (error) {
     console.error('Error starting job posting:', error);
@@ -71,28 +55,20 @@ router.get('/status/:jobId', authenticate, async (req: AuthRequest, res) => {
     const { jobId } = req.params;
     const userId = req.user!.id;
 
-    const job = await prisma.job.findFirst({
-      where: { id: jobId, userId },
-      include: {
-        postings: {
-          include: {
-            board: true
-          }
-        }
-      }
-    });
-
-    if (!job) {
+    // Get job and verify ownership
+    const job = await db.job.findById(jobId, true); // include postings
+    if (!job || job.user_id !== userId) {
       return res.status(404).json({ error: 'Job not found' });
     }
 
     // Calculate posting statistics
+    const postings = job.postings || [];
     const stats = {
-      total: job.postings.length,
-      pending: job.postings.filter(p => p.status === 'pending').length,
-      posting: job.postings.filter(p => p.status === 'posting').length,
-      success: job.postings.filter(p => p.status === 'success').length,
-      failed: job.postings.filter(p => p.status === 'failed').length
+      total: postings.length,
+      pending: postings.filter((p: any) => p.status === 'pending').length,
+      posting: postings.filter((p: any) => p.status === 'posting').length,
+      success: postings.filter((p: any) => p.status === 'success').length,
+      failed: postings.filter((p: any) => p.status === 'failed').length
     };
 
     return res.json({
@@ -103,14 +79,14 @@ router.get('/status/:jobId', authenticate, async (req: AuthRequest, res) => {
         company: job.company
       },
       stats,
-      postings: job.postings.map(p => ({
+      postings: postings.map((p: any) => ({
         id: p.id,
-        boardName: p.board.name,
+        boardName: p.board?.name,
         status: p.status,
-        externalUrl: p.externalUrl,
-        errorMessage: p.errorMessage,
-        postedAt: p.postedAt,
-        updatedAt: p.updatedAt
+        externalUrl: p.external_url,
+        errorMessage: p.error_message,
+        postedAt: p.posted_at,
+        updatedAt: p.updated_at
       }))
     });
   } catch (error) {
@@ -125,20 +101,23 @@ router.get('/screenshot/:postingId', authenticate, async (req: AuthRequest, res)
     const { postingId } = req.params;
     const userId = req.user!.id;
 
-    const posting = await prisma.jobPosting.findUnique({
-      where: { id: postingId },
-      include: {
-        job: true,
-        board: true
-      }
-    });
+    // Get posting with job and board info
+    const { data: posting } = await supabase
+      .from('job_postings')
+      .select(`
+        *,
+        job:postjob_jobs(*),
+        board:job_boards(*)
+      `)
+      .eq('id', postingId)
+      .single();
 
     if (!posting) {
       return res.status(404).json({ error: 'Posting not found' });
     }
 
     // Verify ownership
-    if (posting.job.userId !== userId) {
+    if (posting.job.user_id !== userId) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -174,17 +153,22 @@ router.post('/retry/:postingId', authenticate, async (req: AuthRequest, res) => 
     const { postingId } = req.params;
     const userId = req.user!.id;
 
-    const posting = await prisma.jobPosting.findUnique({
-      where: { id: postingId },
-      include: { job: true }
-    });
+    // Get posting with job info
+    const { data: posting } = await supabase
+      .from('job_postings')
+      .select(`
+        *,
+        job:postjob_jobs(*)
+      `)
+      .eq('id', postingId)
+      .single();
 
     if (!posting) {
       return res.status(404).json({ error: 'Posting not found' });
     }
 
     // Verify ownership
-    if (posting.job.userId !== userId) {
+    if (posting.job.user_id !== userId) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -194,16 +178,13 @@ router.post('/retry/:postingId', authenticate, async (req: AuthRequest, res) => 
     }
 
     // Reset posting status
-    await prisma.jobPosting.update({
-      where: { id: postingId },
-      data: {
-        status: 'pending',
-        errorMessage: null
-      }
+    await db.jobPosting.update(postingId, {
+      status: 'pending',
+      errorMessage: null
     });
 
     // Add job back to queue
-    await addJobToQueue(posting.jobId);
+    await addJobToQueue(posting.job_id);
 
     return res.json({
       message: 'Retry initiated',
@@ -224,9 +205,7 @@ router.post('/test-board', authenticate, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Board ID is required' });
     }
 
-    const board = await prisma.jobBoard.findUnique({
-      where: { id: boardId }
-    });
+    const board = await db.jobBoard.findById(boardId);
 
     if (!board) {
       return res.status(404).json({ error: 'Board not found' });
@@ -237,7 +216,7 @@ router.post('/test-board', authenticate, async (req: AuthRequest, res) => {
 
     return res.json({
       boardName: board.name,
-      url: board.postUrl,
+      url: board.post_url,
       connected: isConnected,
       message: isConnected ? 'Board is accessible' : 'Failed to connect to board'
     });
@@ -247,17 +226,90 @@ router.post('/test-board', authenticate, async (req: AuthRequest, res) => {
   }
 });
 
+// POST /api/posting/test-posting - Test actual job posting with browser preview
+router.post('/test-posting', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { jobId, boardName, enablePreview } = req.body;
+    const userId = req.user!.id;
+
+    if (!jobId || !boardName) {
+      return res.status(400).json({ error: 'Job ID and board name are required' });
+    }
+
+    // Get job and verify ownership
+    const job = await db.job.findById(jobId);
+    if (!job || job.user_id !== userId) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Set browser preview mode
+    if (enablePreview) {
+      process.env.BROWSER_PREVIEW = 'true';
+      console.log('🖥️ Browser preview mode enabled - browser will be visible');
+    } else {
+      delete process.env.BROWSER_PREVIEW;
+    }
+
+    // Import posting service (dynamic to pick up env changes)
+    const { postingService } = await import('../../services/posting.service');
+
+    console.log(`🧪 Starting test posting for ${boardName}...`);
+    console.log(`📋 Job: ${job.title} at ${job.company}`);
+
+    // Prepare job data
+    const jobData = {
+      title: job.title,
+      description: job.description,
+      location: job.location,
+      company: job.company,
+      salaryMin: job.salary_min || undefined,
+      salaryMax: job.salary_max || undefined,
+      employmentType: job.employment_type || undefined,
+      department: job.department || undefined,
+      contactEmail: job.contact_email
+    };
+
+    // Get user for credentials
+    const user = await db.user.findById(userId);
+    const credentials = {
+      email: user?.email || '',
+      password: process.env.DEFAULT_POSTING_PASSWORD || 'demo-password',
+      company: job.company
+    };
+
+    // Perform test posting
+    const result = await postingService.postToBoard(boardName, jobData, credentials);
+
+    // Reset browser preview mode
+    delete process.env.BROWSER_PREVIEW;
+
+    return res.json({
+      success: result.success,
+      boardName: result.boardName,
+      externalUrl: result.externalUrl,
+      errorMessage: result.errorMessage,
+      message: result.success ?
+        `✅ Successfully posted to ${boardName}${result.externalUrl ? ` - ${result.externalUrl}` : ''}` :
+        `❌ Failed to post to ${boardName}: ${result.errorMessage}`,
+      previewMode: enablePreview
+    });
+  } catch (error) {
+    // Reset browser preview mode
+    delete process.env.BROWSER_PREVIEW;
+
+    console.error('Error in test posting:', error);
+    return res.status(500).json({ error: 'Failed to test posting' });
+  }
+});
+
 // GET /api/posting/logs/:jobId - Get posting logs
 router.get('/logs/:jobId', authenticate, async (req: AuthRequest, res) => {
   try {
     const { jobId } = req.params;
     const userId = req.user!.id;
 
-    const job = await prisma.job.findFirst({
-      where: { id: jobId, userId }
-    });
-
-    if (!job) {
+    const job = await db.job.findById(jobId);
+    if (!job || job.user_id !== userId) {
       return res.status(404).json({ error: 'Job not found' });
     }
 

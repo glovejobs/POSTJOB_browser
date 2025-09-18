@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-interface EnvironmentConfig {
+export interface EnvironmentConfig {
   NODE_ENV: string;
   PORT: number;
   DATABASE_URL: string;
@@ -12,6 +12,8 @@ interface EnvironmentConfig {
   STRIPE_WEBHOOK_SECRET: string;
   STRIPE_PRICE_PER_JOB: number;
   FRONTEND_URL: string;
+  SUPABASE_URL: string;
+  SUPABASE_ANON_KEY: string;
   LLM_PROVIDER?: string;
   GROQ_API_KEY?: string;
   OPENAI_API_KEY?: string;
@@ -27,10 +29,12 @@ interface EnvironmentConfig {
 function validateEnvironment(): EnvironmentConfig {
   const requiredVars = [
     'DATABASE_URL',
-    'REDIS_URL', 
+    'REDIS_URL',
     'JWT_SECRET',
     'STRIPE_SECRET_KEY',
-    'STRIPE_WEBHOOK_SECRET'
+    'STRIPE_WEBHOOK_SECRET',
+    'SUPABASE_URL',
+    'SUPABASE_ANON_KEY'
   ];
 
   const missing = requiredVars.filter(key => !process.env[key]);
@@ -73,6 +77,8 @@ function validateEnvironment(): EnvironmentConfig {
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET!,
     STRIPE_PRICE_PER_JOB: stripePrice,
     FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
+    SUPABASE_URL: process.env.SUPABASE_URL!,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
     LLM_PROVIDER: process.env.LLM_PROVIDER,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,

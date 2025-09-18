@@ -27,24 +27,45 @@ export class BrowserService {
   async initialize(): Promise<void> {
     if (!this.browser) {
       console.log('🚀 Launching browser...');
-      this.browser = await chromium.launch({
-        headless: config.NODE_ENV === 'production',
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu'
-        ]
-      });
 
-      this.context = await this.browser.newContext({
-        viewport: { width: 1280, height: 720 },
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        ignoreHTTPSErrors: true,
-      });
+      // Add retry logic for browser initialization
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          this.browser = await chromium.launch({
+            headless: config.NODE_ENV === 'production' && !process.env.BROWSER_PREVIEW,
+            slowMo: process.env.BROWSER_PREVIEW ? 1000 : 0, // Slow down for demo
+            args: [
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-accelerated-2d-canvas',
+              '--no-first-run',
+              '--no-zygote',
+              '--disable-gpu'
+            ]
+          });
+
+          this.context = await this.browser.newContext({
+            viewport: { width: 1280, height: 720 },
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            ignoreHTTPSErrors: true,
+          });
+
+          console.log('✅ Browser initialized successfully');
+          break;
+        } catch (error) {
+          console.error(`❌ Browser initialization failed (${3 - retries + 1}/3):`, error);
+          retries--;
+
+          if (retries === 0) {
+            throw new Error('Failed to initialize browser after 3 attempts');
+          }
+
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
     }
   }
 
@@ -63,16 +84,25 @@ export class BrowserService {
     if (!this.context) {
       await this.initialize();
     }
-    const page = await this.context!.newPage();
-    
-    // Set default timeouts
-    page.setDefaultTimeout(30000); // 30 seconds
-    page.setDefaultNavigationTimeout(30000);
 
-    // Add request interception to block unnecessary resources
+    // Add small delay to ensure browser is ready
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const page = await this.context!.newPage();
+
+    // Set increased timeouts for better reliability
+    page.setDefaultTimeout(60000); // 60 seconds
+    page.setDefaultNavigationTimeout(60000);
+
+    // Less aggressive resource blocking - only block media and large images
     await page.route('**/*', (route) => {
       const resourceType = route.request().resourceType();
-      if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
+      const url = route.request().url();
+
+      // Only block media and very large images, allow CSS/fonts for proper rendering
+      if (resourceType === 'media' ||
+          (resourceType === 'image' && url.includes('banner')) ||
+          (resourceType === 'image' && url.includes('hero'))) {
         route.abort();
       } else {
         route.continue();
