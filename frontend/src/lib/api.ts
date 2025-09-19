@@ -11,63 +11,111 @@ export const api = axios.create({
   }
 });
 
-// Add API key to requests if available
+// Add authentication to requests
 api.interceptors.request.use((config) => {
+  // Check for Bearer token first (Supabase Auth)
+  const storedSession = localStorage.getItem('supabase_session');
+  if (storedSession) {
+    try {
+      const session = JSON.parse(storedSession);
+      if (session.access_token) {
+        config.headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+    } catch (error) {
+      console.error('Error parsing session:', error);
+    }
+  }
+
+  // Fallback to API key for backward compatibility
   const apiKey = localStorage.getItem('api_key');
-  if (apiKey) {
+  if (apiKey && !config.headers['Authorization']) {
     config.headers['x-api-key'] = apiKey;
   }
+
   return config;
 });
 
-// Auth endpoints - Hybrid approach using both backend and Supabase
-export const auth = {
-  register: async (email: string) => {
-    try {
-      // First, create user in backend (handles API key generation)
-      const { data } = await api.post('/api/auth/register', { email });
+// Handle 401 responses and refresh token
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
 
-      // Also create/sync user in Supabase for real-time features
+    // If 401 and not already retried
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
       try {
-        await db.users.create({
-          email,
-          api_key: data.apiKey,
-          full_name: localStorage.getItem('user_name') || undefined,
-        });
-      } catch (supabaseError) {
-        // If Supabase fails, log but don't block the registration
-        console.error('Supabase sync failed:', supabaseError);
-      }
+        const storedSession = localStorage.getItem('supabase_session');
+        if (storedSession) {
+          const session = JSON.parse(storedSession);
 
-      return data;
-    } catch (error) {
-      throw error;
+          // Try to refresh the token
+          const response = await axios.post(`${API_URL}/api/auth/refresh`, {
+            refresh_token: session.refresh_token
+          });
+
+          if (response.data.session) {
+            // Update stored session
+            const newSession = response.data.session;
+            localStorage.setItem('supabase_session', JSON.stringify({
+              access_token: newSession.access_token,
+              refresh_token: newSession.refresh_token,
+              expires_at: newSession.expires_at
+            }));
+
+            // Update the original request with new token
+            originalRequest.headers['Authorization'] = `Bearer ${newSession.access_token}`;
+
+            // Retry the original request
+            return api(originalRequest);
+          }
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        // Redirect to login if refresh fails
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('supabase_session');
+          localStorage.removeItem('api_key');
+          window.location.href = '/login';
+        }
+      }
     }
+
+    return Promise.reject(error);
+  }
+);
+
+// Auth endpoints - Using Supabase Auth
+export const auth = {
+  register: async (email: string, password: string, fullName?: string) => {
+    const { data } = await api.post('/api/auth/register', { email, password, fullName });
+    return data;
   },
 
-  login: async (email: string) => {
-    try {
-      // First try backend login
-      const { data } = await api.post('/api/auth/login', { email });
+  login: async (email: string, password: string) => {
+    const { data } = await api.post('/api/auth/login', { email, password });
+    return data;
+  },
 
-      // Sync with Supabase if needed
-      try {
-        const existingUser = await db.users.findByEmail(email).catch(() => null);
-        if (!existingUser) {
-          await db.users.create({
-            email,
-            api_key: data.apiKey,
-            full_name: localStorage.getItem('user_name') || undefined,
-          });
-        }
-      } catch (supabaseError) {
-        console.error('Supabase sync failed:', supabaseError);
-      }
+  logout: async () => {
+    const { data } = await api.post('/api/auth/logout');
+    return data;
+  },
 
-      return data;
-    } catch (error) {
-      throw error;
-    }
+  refreshToken: async (refreshToken: string) => {
+    const { data } = await api.post('/api/auth/refresh', { refresh_token: refreshToken });
+    return data;
+  },
+
+  forgotPassword: async (email: string) => {
+    const { data } = await api.post('/api/auth/forgot-password', { email });
+    return data;
+  },
+
+  resetPassword: async (token: string, password: string) => {
+    const { data } = await api.post('/api/auth/reset-password', { token, password });
+    return data;
   },
 
   me: async () => {
@@ -75,14 +123,9 @@ export const auth = {
     return data;
   },
 
-  // New method to get user from Supabase directly
-  getUserFromSupabase: async (apiKey: string) => {
-    try {
-      return await db.users.findByApiKey(apiKey);
-    } catch (error) {
-      console.error('Failed to get user from Supabase:', error);
-      return null;
-    }
+  updateProfile: async (updates: { fullName?: string }) => {
+    const { data } = await api.put('/api/auth/profile', updates);
+    return data;
   }
 };
 

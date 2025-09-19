@@ -6,6 +6,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteTransition } from "@/components/ui/PageTransition";
 import { TopLoadingBar } from "@/components/ui/TopLoadingBar";
 import { ToastProvider } from "@/components/ui/Toast";
+import { AuthProvider } from "@/contexts/auth-context";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -43,12 +44,14 @@ export default function RootLayout({
         } as React.CSSProperties}
       >
         <ErrorBoundary>
-          <ToastProvider>
-            <TopLoadingBar />
-            <RouteTransition>
-              {children}
-            </RouteTransition>
-          </ToastProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <TopLoadingBar />
+              <RouteTransition>
+                {children}
+              </RouteTransition>
+            </ToastProvider>
+          </AuthProvider>
         </ErrorBoundary>
       </body>
     </html>
