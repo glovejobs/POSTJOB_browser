@@ -18,6 +18,7 @@ export interface EnvironmentConfig {
   GROQ_API_KEY?: string;
   OPENAI_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
+  OPENROUTER_API_KEY?: string;
   // Email configuration
   EMAIL_FROM?: string;
   SMTP_HOST?: string;
@@ -83,6 +84,7 @@ function validateEnvironment(): EnvironmentConfig {
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
     // Email configuration
     EMAIL_FROM: process.env.EMAIL_FROM,
     SMTP_HOST: process.env.SMTP_HOST,

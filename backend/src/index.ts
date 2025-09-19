@@ -19,6 +19,7 @@ import analyticsRoutes from './api/routes/analytics.routes';
 import searchRoutes from './api/routes/search.routes';
 import postingRoutes from './api/routes/posting.routes';
 import paymentRoutes from './api/routes/payment.routes';
+import aiRoutes from './api/routes/ai.routes';
 // import publicRoutes from './api/routes/public.routes';
 
 // Import queue
@@ -83,6 +84,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/posting', postingRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/ai', aiRoutes);
 // app.use('/api/jobs', publicRoutes);
 // app.use('/api/applications', publicRoutes);
 
